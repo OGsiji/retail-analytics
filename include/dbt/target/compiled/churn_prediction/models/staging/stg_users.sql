@@ -1,12 +1,7 @@
 -- include/dbt/models/staging/stg_users.sql
 -- Staging model for users data - clean and standardize
 
-{{
-  config(
-    materialized='view',
-    schema='churn_staging'
-  )
-}}
+
 
 WITH source_users AS (
     SELECT 
@@ -15,7 +10,7 @@ WITH source_users AS (
         region,
         signup_channel,
         created_at
-    FROM {{ source('public', 'users') }}
+    FROM "postgres"."public"."users"
 ),
 
 cleaned_users AS (
@@ -54,4 +49,3 @@ cleaned_users AS (
 )
 
 SELECT * FROM cleaned_users
-

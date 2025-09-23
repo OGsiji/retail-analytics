@@ -5,10 +5,6 @@ from datetime import datetime, timedelta
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models.baseoperator import chain
-from astro import sql as aql
-from astro.files import File
-from astro.sql.table import Table, Metadata
-from astro.constants import FileType
 import pandas as pd
 import json
 import logging
@@ -185,23 +181,28 @@ def churn_prediction_pipeline():
             df = df.dropna()
             
             # Clear existing data
-            postgres_hook.run("TRUNCATE TABLE churn_analytics.raw_user_activities;")
+            postgres_hook.run("TRUNCATE TABLE churn_analytics.raw_user_activities CASCADE;")
             
-            # Insert data in batches
+            # Insert data using bulk insert
             records = df.to_dict('records')
-            insert_sql = """
-                INSERT INTO churn_analytics.raw_user_activities 
-                (user_id, session_id, event_name, event_timestamp, device, app_version) 
-                VALUES %s;
-            """
             
-            # Insert in batches of 1000
-            for i in range(0, len(records), 1000):
-                batch = records[i:i+1000]
-                values = [(r['user_id'], r['session_id'], r['event_name'], 
-                          r['event_timestamp'], r['device'], r['app_version']) 
-                         for r in batch]
-                postgres_hook.run(insert_sql, parameters=values)
+            if records:
+                # Create insert query with placeholders
+                placeholders = ', '.join(['%s'] * len(records[0]))
+                columns = ', '.join(records[0].keys())
+                insert_sql = f"""
+                    INSERT INTO churn_analytics.raw_user_activities ({columns})
+                    VALUES ({placeholders})
+                """
+                
+                # Convert records to tuples for bulk insert
+                values = [tuple(record.values()) for record in records]
+                
+                # Insert in batches of 1000
+                for i in range(0, len(values), 1000):
+                    batch = values[i:i+1000]
+                    for row in batch:
+                        postgres_hook.run(insert_sql, parameters=row)
             
             logging.info(f"Successfully loaded {len(df)} activity records")
             return {"activities_loaded": len(df)}

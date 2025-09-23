@@ -1,20 +1,20 @@
--- include/dbt/models/marts/churn_features.sql
+
+  
+    
+
+  create  table "postgres"."public_churn_marts"."churn_features__dbt_tmp"
+  
+  
+    as
+  
+  (
+    -- include/dbt/models/marts/churn_features.sql
 -- Final mart model for churn prediction features
 
-{{
-  config(
-    materialized='table',
-    schema='churn_marts',
-    indexes=[
-      {'columns': ['user_id'], 'unique': true},
-      {'columns': ['churn_flag']}
-    ],
-    post_hook="ANALYZE {{ this }}"
-  )
-}}
+
 
 WITH users_base AS (
-    SELECT * FROM {{ ref('stg_users') }}
+    SELECT * FROM "postgres"."public_churn_staging"."stg_users"
 ),
 
 transactions_agg AS (
@@ -42,7 +42,7 @@ transactions_agg AS (
             WHEN COUNT(*) = 0 THEN 0
             ELSE COUNT(CASE WHEN status = 'success' THEN 1 END)::float / COUNT(*)
         END AS transaction_success_rate
-    FROM {{ ref('stg_transactions') }}
+    FROM "postgres"."public_churn_staging"."stg_transactions"
     GROUP BY user_id
 ),
 
@@ -74,7 +74,7 @@ activities_agg AS (
         COUNT(CASE WHEN activity_hour BETWEEN 12 AND 18 THEN 1 END) AS afternoon_activities,
         COUNT(CASE WHEN activity_hour BETWEEN 18 AND 24 THEN 1 END) AS evening_activities,
         COUNT(CASE WHEN activity_day_of_week IN (0, 6) THEN 1 END) AS weekend_activities
-    FROM {{ ref('stg_activities') }}
+    FROM "postgres"."public_churn_staging"."stg_activities"
     GROUP BY user_id
 ),
 
@@ -263,3 +263,5 @@ SELECT
     CURRENT_TIMESTAMP AS feature_created_at
     
 FROM final_features
+  );
+  

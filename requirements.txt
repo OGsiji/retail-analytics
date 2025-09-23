@@ -1,17 +1,8 @@
-# Airflow providers
-apache-airflow-providers-postgres==5.7.1
-
-# dbt and Cosmos for dbt integration  
-astronomer-cosmos[dbt-postgres]==1.2.0
-dbt-postgres==1.7.4
-
-# Astro SDK for data operations
-astro-sdk-python[postgres]==1.7.0
-
-# Data processing
-pandas==2.1.3
-sqlalchemy==2.0.23
-psycopg2-binary==2.9.8
-
-# API client for refresh calls
+# requirements.txt - Astro Runtime 11.8.0 Compatible
+apache-airflow-providers-postgres==5.9.0
+astronomer-cosmos[dbt-postgres]==1.0.5
+dbt-postgres==1.5.4
+dbt-core<=1.5.4
+pandas==2.0.3
 requests==2.31.0
+astro-run-dag # This package is needed for the astro run command. It will be removed before a deploy
