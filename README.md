@@ -64,6 +64,7 @@ This data pipeline consolidates customer transaction data and user activity logs
 - **API**: FastAPI with automatic documentation
 - **Containerization**: Docker & Docker Compose
 - **Data Processing**: Pandas, SQLAlchemy
+- **Dashboarding**: Metabase
 
 ## Features
 
