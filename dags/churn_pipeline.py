@@ -7,7 +7,10 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.models.baseoperator import chain
 import pandas as pd
 import json
+import psycopg2.extras
 import logging
+
+
 
 # dbt integration
 try:
@@ -176,47 +179,52 @@ def churn_prediction_pipeline():
     # Task 4: Load User Activities CSV Data  
     @task
     def load_activities_csv():
-        """Load user activities data from CSV file into PostgreSQL"""
+        """Load user activities data from CSV file into PostgreSQL using bulk insert"""
         postgres_hook = PostgresHook(postgres_conn_id='postgres_default')
-        
+
         try:
             # Read CSV file
             df = pd.read_csv('/usr/local/airflow/include/datasets/user_activities.csv')
-            
+
             # Clean and validate data
-            df['event_timestamp'] = pd.to_datetime(df['event_timestamp'])
-            df = df.dropna()
-            
+            df['event_timestamp'] = pd.to_datetime(df['event_timestamp'], errors='coerce')
+            df = df.dropna()  # Remove rows with nulls
+
             # Clear existing data
             postgres_hook.run("TRUNCATE TABLE churn_analytics.raw_user_activities CASCADE;")
-            
-            # Insert data using bulk insert
+
+            # Prepare records
             records = df.to_dict('records')
-            
+
             if records:
-                # Create insert query with placeholders
-                placeholders = ', '.join(['%s'] * len(records[0]))
-                columns = ', '.join(records[0].keys())
+                columns = list(records[0].keys())  # Extract column names
                 insert_sql = f"""
-                    INSERT INTO churn_analytics.raw_user_activities ({columns})
-                    VALUES ({placeholders})
+                    INSERT INTO churn_analytics.raw_user_activities ({', '.join(columns)})
+                    VALUES %s
                 """
-                
-                # Convert records to tuples for bulk insert
-                values = [tuple(record.values()) for record in records]
-                
-                # Insert in batches of 1000
-                for i in range(0, len(values), 1000):
-                    batch = values[i:i+1000]
-                    for row in batch:
-                        postgres_hook.run(insert_sql, parameters=row)
-            
+
+                # Convert to tuple list
+                values = [tuple(record[col] for col in columns) for record in records]
+
+                # Use psycopg2 bulk insert
+                conn = postgres_hook.get_conn()
+                cursor = conn.cursor()
+
+                batch_size = 1000  # Insert in batches of 1000
+                for i in range(0, len(values), batch_size):
+                    batch = values[i:i + batch_size]
+                    psycopg2.extras.execute_values(cursor, insert_sql, batch)
+
+                conn.commit()
+                cursor.close()
+
             logging.info(f"Successfully loaded {len(df)} activity records")
             return {"activities_loaded": len(df)}
-            
+
         except Exception as e:
             logging.error(f"Failed to load activities CSV: {str(e)}")
             raise
+
     
     # Task 5: Data Quality Checks
     @task
