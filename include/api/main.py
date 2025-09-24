@@ -121,7 +121,7 @@ def load_churn_data():
             user_lifecycle_stage,
             churn_flag,
             feature_created_at
-        FROM churn_marts.churn_features
+        FROM "public_churn_marts".churn_features
         ORDER BY user_id
         """
         
@@ -135,8 +135,8 @@ def load_churn_data():
         
         # Fill NaN values
         df = df.fillna({
-            'last_transaction_date': None,
-            'last_activity_date': None,
+            'last_transaction_date': pd.NaT,
+            'last_activity_date': pd.NaT,
             'avg_transaction_amount': 0,
             'avg_session_duration_minutes': 0,
             'cart_conversion_rate': 0,
