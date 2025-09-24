@@ -1,4 +1,3 @@
-version: "3.1"
 services:
   postgres:
     image: postgres:15
@@ -7,7 +6,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./include/datasets:/docker-entrypoint-initdb.d
@@ -19,9 +18,9 @@ services:
       retries: 5
 
   churn-api:
-    build:
-      context: .
-      dockerfile: include/api/Dockerfile
+    build: 
+      context: ./include/api
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:

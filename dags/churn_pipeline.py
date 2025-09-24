@@ -101,6 +101,13 @@ def churn_prediction_pipeline():
             with open('/usr/local/airflow/include/datasets/postgres_transactions_dump.sql', 'r') as file:
                 sql_content = file.read()
             
+            # Fix: Use individual TRUNCATE commands
+            try:
+                postgres_hook.run("TRUNCATE TABLE transactions CASCADE;")
+                postgres_hook.run("TRUNCATE TABLE users CASCADE;")
+            except:
+                pass  # Tables don't exist yet, that's fine
+            
             # Execute the SQL dump
             postgres_hook.run(sql_content)
             logging.info("Successfully loaded transaction data from dump file")
@@ -361,9 +368,9 @@ def churn_prediction_pipeline():
                 SELECT 
                     COUNT(*) as total_users,
                     SUM(churn_flag) as churned_users,
-                    ROUND(AVG(total_spend), 2) as avg_total_spend,
-                    ROUND(AVG(session_count), 2) as avg_session_count
-                FROM churn_marts.churn_features;
+                    ROUND(AVG(total_spend_ngn), 2) as avg_total_spend,
+                    ROUND(AVG(unique_sessions), 2) as avg_session_count
+                FROM public_churn_marts.churn_features;
             """)
             
             total_users, churned_users, avg_spend, avg_sessions = stats

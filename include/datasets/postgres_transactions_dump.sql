@@ -1,8 +1,8 @@
 -- Postgres SQL dump for churn assessment
 BEGIN;
 
-DROP TABLE IF EXISTS transactions;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
   user_id INT PRIMARY KEY,
   email VARCHAR(255),
