@@ -1,6 +1,8 @@
 # Customer Churn Prediction Data Pipeline
 
-A production-ready ETL pipeline for customer churn prediction model development, implementing scalable data ingestion, transformation, and serving using Apache Airflow, dbt, and FastAPI.
+A production-ready ETL pipeline for customer churn prediction model development, implementing scalable data ingestion, transformation, and serving using Apache Airflow, dbt, and FastAPI, Metabase.
+
+![Data Model](https://raw.githubusercontent.com/OGsiji/churn-prediction-pipeline/main/images/metabase.png)
 
 ## Table of Contents
 
@@ -21,6 +23,8 @@ A production-ready ETL pipeline for customer churn prediction model development,
 ## Overview
 
 This data pipeline consolidates customer transaction data and user activity logs into an ML-ready dataset for churn prediction modeling. The system processes multiple data sources, applies comprehensive feature engineering, and serves the results via a REST API.
+
+![Data Model](https://raw.githubusercontent.com/OGsiji/churn-prediction-pipeline/main/images/airflow1.png)
 
 ### Key Deliverables
 - **Automated ETL Pipeline**: Orchestrated with Apache Airflow
@@ -80,6 +84,9 @@ This data pipeline consolidates customer transaction data and user activity logs
 - **Export Capabilities**: CSV and JSON export functionality
 - **Real-time Queries**: Dynamic filtering and pagination
 - **Health Monitoring**: Service health checks and metrics
+
+
+
 
 ## Quick Start
 
@@ -248,6 +255,8 @@ Users are classified as churned (`churn_flag = 1`) if:
 - Active for 30+ days with zero spend and fewer than 3 sessions
 
 ## API Documentation
+
+![Data Model](https://raw.githubusercontent.com/OGsiji/churn-prediction-pipeline/main/images/fastapimain.png)
 
 ### Base URL
 - **Local Development**: http://localhost:8000
@@ -446,6 +455,8 @@ docker ps
 
 # Restart services
 astro dev restart
+
+![Data Model](https://raw.githubusercontent.com/OGsiji/churn-prediction-pipeline/main/images/codebase.png)
 
 # Check logs
 astro dev logs
