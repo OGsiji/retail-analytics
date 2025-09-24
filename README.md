@@ -456,11 +456,11 @@ docker ps
 # Restart services
 astro dev restart
 
-![Codebase](images/codebase.png)
 
 # Check logs
 astro dev logs
 ```
+![Codebase](images/codebase.png)
 
 **Database Connection Errors**
 ```bash
