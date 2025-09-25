@@ -64,6 +64,7 @@ This data pipeline consolidates customer transaction data and user activity logs
 - **API**: FastAPI with automatic documentation
 - **Containerization**: Docker & Docker Compose
 - **Data Processing**: Pandas, SQLAlchemy
+- **Dashboarding**: Metabase
 
 ## Features
 
@@ -113,9 +114,6 @@ cp postgres_transactions_dump.sql include/datasets/
 
 3. **Start the Pipeline**
 ```bash
-# Remove Docker version warning
-sed -i '' '1d' docker-compose.override.yml
-
 # Start all services
 astro dev start
 ```
