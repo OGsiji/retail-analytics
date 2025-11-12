@@ -1,0 +1,54 @@
+version: 2
+
+sources:
+  - name: retail_raw
+    description: Raw retail sales data loaded from CSV
+    schema: public
+    tables:
+      - name: retail_sales
+        description: |
+          Raw retail sales transaction data from supermarket POS systems.
+          One week of sales data across multiple stores, categories, and suppliers.
+        columns:
+          - name: Store_Name
+            description: Name of the retail outlet or branch
+            tests:
+              - not_null
+
+          - name: Item_Code
+            description: Unique internal identifier for the product
+            tests:
+              - not_null
+
+          - name: Item_Barcode
+            description: Standard barcode identifier (may have nulls)
+
+          - name: Description
+            description: SKU product description
+
+          - name: Category
+            description: Broad product grouping (e.g., FOODS)
+
+          - name: Department
+            description: Mid-level product grouping
+
+          - name: Sub_Department
+            description: Finer product classification
+
+          - name: Section
+            description: Micro-segmentation of products
+
+          - name: Quantity
+            description: Number of units sold
+
+          - name: Total_Sales
+            description: Total sales value (Quantity × Realized Price)
+
+          - name: RRP
+            description: Recommended Retail Price
+
+          - name: Supplier
+            description: Supplier or distributor name
+
+          - name: Date_Of_Sale
+            description: Transaction date

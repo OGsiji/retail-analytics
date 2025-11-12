@@ -1,10 +1,10 @@
 # include/dbt/dbt_project.yml
-name: 'churn_prediction'
+name: 'retail_analytics'
 version: '1.0.0'
 config-version: 2
 
 # This setting configures which "profile" dbt uses for this project.
-profile: 'churn_prediction'
+profile: 'retail_analytics'
 
 # These configurations specify where dbt should look for different types of files.
 model-paths: ["models"]
@@ -19,23 +19,25 @@ clean-targets:
   - "dbt_packages"
 
 models:
-  churn_prediction:
-    # Applies to all files under models/staging/
-    staging:
-      +materialized: view
-      +schema: churn_staging
-    # Applies to all files under models/marts/
-    marts:
-      +materialized: table
-      +schema: churn_marts
+  retail_analytics:
+    # Retail Analytics Models
+    retail:
+      staging:
+        +materialized: view
+        +schema: retail_staging
+      marts:
+        +materialized: table
+        +schema: retail_marts
+      analytics:
+        +materialized: table
+        +schema: retail_analytics
 
 vars:
-  # Define churn threshold in days
-  churn_threshold_days: 30
-  
-  # Define minimum transaction amount for inclusion
-  min_transaction_amount: 1
+  # Retail Analytics Variables
+  promo_discount_threshold: 0.10  # 10% discount threshold for promo detection
+  promo_min_days: 2  # Minimum days for promo classification
+  bidco_supplier_pattern: 'BIDCO%'  # Pattern to identify Bidco products
 
 seeds:
-  churn_prediction:
-    +schema: churn_analytics
+  retail_analytics:
+    +schema: retail_raw

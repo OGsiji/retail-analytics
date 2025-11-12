@@ -7,7 +7,7 @@ DBT_PROJECT_CONFIG = ProjectConfig(
 )
 
 DBT_CONFIG = ProfileConfig(
-    profile_name="churn_prediction",
+    profile_name="retail_analytics",
     target_name="dev",
     profiles_yml_filepath=Path("/usr/local/airflow/include/dbt/profiles.yml"),
 )

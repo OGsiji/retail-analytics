@@ -20,12 +20,13 @@ services:
       - default
       - shared_network
 
-  churn-api:
-    build: 
+  retail-api:
+    build:
       context: ./include/api
       dockerfile: Dockerfile
+    command: python retail_api.py
     ports:
-      - "8000:8000"
+      - "8001:8001"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
     depends_on:
@@ -35,13 +36,12 @@ services:
       - ./include/api:/app
     restart: always
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
       - shared_network
-    
 
   metabase:
     image: metabase/metabase:v0.47.4
@@ -62,7 +62,6 @@ services:
     restart: always
     networks:
       - shared_network
-    
 
 volumes:
   postgres_data:

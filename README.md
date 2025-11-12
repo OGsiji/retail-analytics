@@ -1,6 +1,8 @@
-# Customer Churn Prediction Data Pipeline
+# Retail Analytics Pipeline - Bidco Africa
 
-A production-ready ETL pipeline for customer churn prediction model development, implementing scalable data ingestion, transformation, and serving using Apache Airflow, dbt, and FastAPI, Metabase.
+A production-ready data pipeline for retail analytics, implementing ETL/ELT orchestration with Apache Airflow, dbt transformations, FastAPI service, and Metabase visualization.
+
+**Purpose**: Analyze supermarket POS data to provide actionable insights for Bidco Africa's commercial and marketing teams.
 
 ![metabase](images/metabase.png)
 
@@ -8,541 +10,813 @@ A production-ready ETL pipeline for customer churn prediction model development,
 
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [Features](#features)
 - [Quick Start](#quick-start)
-- [Data Sources](#data-sources)
-- [Pipeline Components](#pipeline-components)
-- [ML-Ready Features](#ml-ready-features)
+- [Challenge Questions Answered](#challenge-questions-answered)
+- [Data Model](#data-model)
 - [API Documentation](#api-documentation)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Assumptions & Design Decisions](#assumptions--design-decisions)
+- [Metabase Dashboards](#metabase-dashboards)
 - [Troubleshooting](#troubleshooting)
-- [Future Enhancements](#future-enhancements)
+
+---
 
 ## Overview
 
-This data pipeline consolidates customer transaction data and user activity logs into an ML-ready dataset for churn prediction modeling. The system processes multiple data sources, applies comprehensive feature engineering, and serves the results via a REST API.
+This retail analytics platform provides comprehensive insights into:
+
+1. **Data Quality Assessment** - Health scores, reliability metrics, and anomaly detection
+2. **Promotional Effectiveness** - Uplift calculation, coverage analysis, and ROI metrics
+3. **Competitive Pricing Intelligence** - Price positioning, benchmarking, and market analysis
+
+### Key Features
+
+✅ Automated data quality scoring (0-100 scale)
+✅ Promotional period detection with uplift calculation
+✅ Competitive price indexing by product category
+✅ Store and supplier benchmarking
+✅ REST API with 10+ endpoints
+✅ Metabase-ready dashboards
 
 ![airflow](images/airflow1.png)
 
-### Key Deliverables
-- **Automated ETL Pipeline**: Orchestrated with Apache Airflow
-- **Data Transformation**: Using dbt for scalable SQL transformations
-- **ML-Ready Dataset**: Comprehensive churn prediction features
-- **REST API**: FastAPI service for data access and export
-- **Data Quality**: Automated validation and monitoring
+---
 
 ## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Data Sources  │    │     Airflow     │    │   PostgreSQL    │
-│                 │───▶│   Orchestrator  │───▶│  Data Warehouse │
-│ • CSV Files     │    │                 │    │                 │
-│ • SQL Dumps     │    └─────────────────┘    └─────────────────┘
-└─────────────────┘              │                       │
-                                 │                       │
-                                 ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   dbt Models    │    │   Data Quality  │    │    FastAPI      │
-│                 │    │     Checks      │    │   REST API      │
-│ • Staging       │    │                 │    │                 │
-│ • Marts         │    └─────────────────┘    └─────────────────┘
-└─────────────────┘                                     │
-                                                        ▼
-                                              ┌─────────────────┐
-                                              │   ML Models /   │
-                                              │  Applications   │
-                                              └─────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      DATA SOURCE                                 │
+│           retail_sales.csv (Supermarket POS Data)                │
+└────────────────┬────────────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   APACHE AIRFLOW                                 │
+│        retail_analytics_pipeline DAG                             │
+│        • CSV Load → PostgreSQL                                   │
+│        • Data Validation                                         │
+│        • dbt Transformation                                      │
+│        • Insight Generation                                      │
+└────────────────┬────────────────────────────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   POSTGRESQL (Data Warehouse)                    │
+│  Schemas:                                                        │
+│  • public (raw: retail_sales)                                   │
+│  • retail_staging (cleaned data)                                │
+│  • retail_marts (business logic: promos, pricing)               │
+│  • retail_analytics (aggregated KPIs)                           │
+└────────────────┬────────────────────────────────────────────────┘
+                 │
+         ┌───────┴───────┐
+         ▼               ▼
+┌──────────────┐  ┌──────────────┐
+│  dbt Models  │  │   FastAPI    │
+│              │  │              │
+│  7 Models:   │  │  Port 8001   │
+│  • Staging   │  │              │
+│  • Marts     │  │  10 Endpoints│
+│  • Analytics │  │              │
+└──────┬───────┘  └──────┬───────┘
+       │                 │
+       └────────┬────────┘
+                ▼
+       ┌─────────────────┐
+       │    METABASE     │
+       │  Visualization  │
+       │      :3000      │
+       └─────────────────┘
 ```
 
-### Technology Stack
-- **Orchestration**: Apache Airflow with Astronomer Runtime
-- **Data Warehouse**: PostgreSQL 15
-- **Transformations**: dbt (data build tool)
-- **API**: FastAPI with automatic documentation
-- **Containerization**: Docker & Docker Compose
-- **Data Processing**: Pandas, SQLAlchemy
-- **Dashboarding**: Metabase
-
-## Features
-
-### Data Ingestion
-- **PostgreSQL Dump Processing**: Automated loading of users and transactions data
-- **CSV File Ingestion**: User activity logs with validation
-- **Incremental Updates**: Support for daily data refreshes
-- **Error Handling**: Comprehensive logging and retry mechanisms
-
-### Data Transformation
-- **Standardized Timestamps**: Consistent datetime formatting across sources
-- **Deduplication**: Removal of duplicate records with configurable rules
-- **Feature Engineering**: 25+ ML-ready features including RFM analysis
-- **Data Quality Checks**: Automated validation of row counts, nulls, and constraints
-
-### API & Serving
-- **REST Endpoints**: Full CRUD operations for churn features
-- **Export Capabilities**: CSV and JSON export functionality
-- **Real-time Queries**: Dynamic filtering and pagination
-- **Health Monitoring**: Service health checks and metrics
-
-
-
+---
 
 ## Quick Start
 
 ### Prerequisites
-- Docker Desktop
-- Docker Compose
-- Astro CLI (`curl -sSL install.astronomer.io | sudo bash`)
-- Python 3.8+ (for local development)
+- Docker Desktop (running)
+- Astro CLI: `brew install astro` (Mac) or [install instructions](https://docs.astronomer.io/astro/cli/install-cli)
 
-### Installation
+### 1. Prepare Your Data
 
-1. **Clone and Initialize Project**
-```bash
-astro dev init churn-prediction-pipeline
-cd churn-prediction-pipeline
+Place your retail sales CSV at:
+```
+include/datasets/retail_sales.csv
 ```
 
-2. **Add Your Data Files**
-```bash
-# Place your data files in include/datasets/
-cp user_activities.csv include/datasets/
-cp postgres_transactions_dump.sql include/datasets/
+**Required columns**:
+```
+Store_Name, Item_Code, Item_Barcode, Description, Category, Department,
+Sub_Department, Section, Quantity, Total_Sales, RRP, Supplier, Date_Of_Sale
 ```
 
-3. **Start the Pipeline**
+**Sample format**:
+```csv
+Store_Name,Item_Code,Item_Barcode,Description,Category,Department,Sub_Department,Section,Quantity,Total_Sales,RRP,Supplier,Date_Of_Sale
+RUAKA,440113,0338232137077,BID ELIANTO CORN OIL 1L,FOODS,COOKING OILS AND FATS,COOKING OIL,CORN OIL,4,2065.52,528.19,BIDCO AFRICA LIMITED,2025-09-26
+```
+
+### 2. Start Services
+
 ```bash
-# Start all services
+cd retail-analytics-pipeline
 astro dev start
 ```
 
-4. **Access Services**
-- **Airflow UI**: http://localhost:8080 (admin/admin)
-- **API Documentation**: http://localhost:8000/docs
-- **PostgreSQL**: localhost:5432 (postgres/postgres)
+Services will be available at:
+- **Airflow**: http://localhost:8080 (admin/admin)
+- **API**: http://localhost:8001
+- **Metabase**: http://localhost:3000
+- **PostgreSQL**: localhost:5435
 
-### First Run
+### 3. Run Pipeline
 
-1. **Trigger the Pipeline**
-   - Go to Airflow UI → DAGs → `churn_prediction_pipeline`
-   - Toggle ON and click "Trigger DAG"
+**Via Airflow UI:**
+1. Open http://localhost:8080
+2. Enable `retail_analytics_pipeline` DAG
+3. Click ▶️ to trigger
 
-2. **Verify Results**
-   - Check pipeline completion in Airflow
-   - Access ML features via API: http://localhost:8000/churn-features
-   - View dataset statistics: http://localhost:8000/churn-features/stats
-
-## Data Sources
-
-### 1. PostgreSQL Transaction Dump
-**File**: `postgres_transactions_dump.sql`
-
-**Tables Created**:
-- `users`: User profiles with signup information
-- `transactions`: Transaction history with amounts and status
-
-**Schema**:
-```sql
--- Users table
-user_id (INT) - Unique identifier
-email (VARCHAR) - User email address
-region (VARCHAR) - Geographic region
-signup_channel (VARCHAR) - Acquisition channel (android/ios/web)
-created_at (TIMESTAMP) - Registration date
-
--- Transactions table
-transaction_id (UUID) - Unique transaction identifier
-user_id (INT) - Foreign key to users
-amount (NUMERIC) - Transaction amount in NGN
-currency (VARCHAR) - Currency code
-status (VARCHAR) - success/failed/refunded
-created_at (TIMESTAMP) - Transaction timestamp
-```
-
-### 2. User Activity Logs
-**File**: `user_activities.csv`
-
-**Schema**:
-```
-user_id - User identifier
-session_id - Session identifier  
-event_name - Activity type (page_view, purchase, add_to_cart, session_start, session_end)
-event_timestamp - Activity timestamp
-device - Device type (phone, tablet, desktop)
-app_version - Application version
-```
-
-## Pipeline Components
-
-### 1. Data Ingestion Tasks
-- **`create_database_schema`**: Initialize database schemas and tables
-- **`load_transaction_dump`**: Process and load PostgreSQL dump
-- **`load_activities_csv`**: Ingest and validate user activity data
-- **`validate_raw_data`**: Data quality checks and integrity validation
-
-### 2. dbt Transformations
-
-#### Staging Models
-- **`stg_users`**: Standardized user data with region/channel normalization
-- **`stg_transactions`**: Cleaned transactions with currency standardization
-- **`stg_activities`**: Processed activities with event standardization
-
-#### Marts Model
-- **`churn_features`**: Final ML-ready feature table
-
-### 3. Data Quality & Validation
-- **`validate_final_features`**: Comprehensive dataset validation
-- **Automated Tests**: dbt tests for data integrity
-- **Health Monitoring**: Service status and data freshness checks
-
-## ML-Ready Features
-
-The pipeline generates a comprehensive feature set optimized for churn prediction:
-
-### User Demographics
-- `user_id`: Unique identifier
-- `email`: User email
-- `region`: Standardized geographic region
-- `channel`: Standardized acquisition channel
-- `signup_date`: Registration timestamp
-- `user_tenure_days`: Days since signup
-
-### Transaction Features
-- `total_transactions`: Total transaction count
-- `successful_transactions`: Successful transaction count
-- `total_spend_ngn`: Total spending amount (NGN)
-- `avg_transaction_amount`: Average transaction value
-- `last_transaction_date`: Most recent transaction
-- `days_since_last_transaction`: Recency metric
-- `transaction_success_rate`: Success rate percentage
-
-### Activity Features
-- `total_activity_events`: Total activity count
-- `unique_sessions`: Number of unique sessions
-- `active_days`: Number of active days
-- `page_views`: Page view count
-- `cart_additions`: Add-to-cart events
-- `purchase_events`: Purchase events
-- `last_activity_date`: Most recent activity
-- `days_since_last_activity`: Activity recency
-- `avg_session_duration_minutes`: Average session length
-
-### Engagement Metrics
-- `mobile_activity_ratio`: Mobile usage percentage
-- `desktop_activity_ratio`: Desktop usage percentage
-- `cart_conversion_rate`: Cart-to-purchase conversion
-- `purchase_conversion_rate`: View-to-purchase conversion
-
-### RFM Analysis
-- `recency_score`: Recency score (1-5)
-- `frequency_score`: Frequency score (1-5)
-- `monetary_score`: Monetary score (1-5)
-- `rfm_total_score`: Combined RFM score (3-15)
-
-### Churn Prediction
-- `user_lifecycle_stage`: User segment (new/activated/engaged/loyal/active/inactive)
-- `churn_flag`: Binary churn indicator (0=active, 1=churned)
-
-### Churn Logic
-Users are classified as churned (`churn_flag = 1`) if:
-- No activity for 30+ days AND no transactions for 60+ days
-- No activity for 60+ days
-- Active for 90+ days but fewer than 5 total activities
-- Active for 30+ days with zero spend and fewer than 3 sessions
-
-## API Documentation
-
-![fastapi](images/fastapimain.png)
-
-### Base URL
-- **Local Development**: http://localhost:8000
-- **Production**: Configure in deployment
-
-### Core Endpoints
-
-#### GET `/churn-features`
-Retrieve churn prediction features with filtering and pagination.
-
-**Parameters**:
-- `limit` (int): Number of records (1-10000, default: 100)
-- `offset` (int): Records to skip (default: 0)
-- `churn_flag` (int): Filter by churn status (0 or 1)
-- `region` (str): Filter by region
-- `channel` (str): Filter by acquisition channel
-- `min_spend` (float): Minimum total spend filter
-- `max_days_inactive` (int): Maximum days since last activity
-
-**Example**:
+**Via CLI:**
 ```bash
-curl "http://localhost:8000/churn-features?churn_flag=1&limit=50"
+astro dev bash
+airflow dags trigger retail_analytics_pipeline
+exit
 ```
 
-#### GET `/churn-features/stats`
-Dataset statistics and distribution metrics.
+Pipeline takes ~5-10 minutes depending on data size.
 
-**Response**:
+### 4. Access Results
+
+**API (Recommended for Quick Check):**
+```bash
+# Health check
+curl http://localhost:8001/health
+
+# Overall data quality
+curl http://localhost:8001/api/data_quality | jq
+
+# Bidco quality specifically
+curl "http://localhost:8001/api/data_quality?dimension=Supplier" | \
+  jq '.[] | select(.dimension_value | contains("BIDCO"))'
+
+# Top 5 Bidco promo performers
+curl "http://localhost:8001/api/promo_summary?bidco_only=true&top_n=5" | jq
+
+# Bidco price positioning
+curl "http://localhost:8001/api/price_index/summary?view_level=Overall" | jq
+
+# Executive insights
+curl http://localhost:8001/api/insights | jq
+```
+
+**Full API docs**: http://localhost:8001/docs
+
+**Metabase Setup**:
+1. Navigate to http://localhost:3000
+2. Complete setup wizard
+3. Add PostgreSQL database:
+   - Host: `postgres`, Port: `5432`
+   - Database: `postgres`, User: `postgres`, Password: `postgres`
+4. Browse schemas: `retail_staging`, `retail_marts`, `retail_analytics`
+
+---
+
+## Challenge Questions Answered
+
+### Context
+
+Bidco Africa (major FMCG manufacturer in East Africa) needs retail intelligence across three key areas:
+
+### 1. Data Health ✅
+
+**Question**: Which stores/suppliers provide reliable data?
+
+**Solution**:
+- Data quality scoring (0-100) by store, supplier, category
+- Health ratings: Excellent/Good/Fair/Poor/Critical
+- Automated outlier detection (negative quantities, extreme prices)
+- Duplicate record identification
+
+**Endpoints**:
+```http
+GET /api/data_quality?dimension=Store|Supplier|Category
+GET /api/data_quality/issues?bidco_only=true
+```
+
+**Example Output**:
 ```json
 {
-  "total_users": 800,
-  "churned_users": 240,
-  "churn_rate_percent": 30.0,
-  "avg_total_spend": 25430.50,
-  "top_regions": [...],
-  "lifecycle_distribution": {...}
+  "dimension": "Supplier",
+  "dimension_value": "BIDCO AFRICA LIMITED",
+  "health_rating": "Good",
+  "avg_quality_score": 87.5,
+  "reliability_status": "Reliable",
+  "low_quality_pct": 3.2
 }
 ```
 
-#### GET `/churn-features/export`
-Export complete dataset in CSV or JSON format.
+### 2. Promotions & Performance ✅
 
-**Parameters**:
-- `format` (str): Export format ("csv" or "json")
-- `churn_flag` (int): Optional filter
+**Question**: Which Bidco SKUs drive the most uplift? What discount depth works?
 
-#### GET `/churn-features/user/{user_id}`
-Get features for a specific user.
+**Solution**:
+- Automated promo detection (≥10% discount, ≥2 days)
+- Uplift calculation vs baseline
+- Coverage analysis (% stores running promo)
+- Discount depth correlation
 
-#### GET `/churn-features/segments`
-User segmentation analysis including RFM and lifecycle segments.
+**Metrics Provided**:
+- ✅ Promo Uplift % = `((Promo Units/Day - Baseline Units/Day) / Baseline) × 100`
+- ✅ Promo Coverage % = `(Stores Running Promo / Total Stores) × 100`
+- ✅ Discount Depth %
+- ✅ Baseline vs Promo Pricing
 
-#### GET `/health`
-Service health check and system status.
-
-### API Client Examples
-
-**Python**:
-```python
-import requests
-import pandas as pd
-
-# Get churn features
-response = requests.get("http://localhost:8000/churn-features?limit=100")
-features = response.json()
-
-# Export to DataFrame
-df = pd.DataFrame(features)
-
-# Get statistics
-stats = requests.get("http://localhost:8000/churn-features/stats").json()
-print(f"Churn rate: {stats['churn_rate_percent']}%")
+**Endpoints**:
+```http
+GET /api/promo_summary?bidco_only=true&top_n=10
+GET /api/promo_summary/aggregated
 ```
 
-**JavaScript**:
-```javascript
-// Fetch churn features
-const response = await fetch('http://localhost:8000/churn-features?limit=50');
-const features = await response.json();
-
-// Export data
-const exportResponse = await fetch('http://localhost:8000/churn-features/export?format=csv');
-const csvData = await exportResponse.text();
+**Example Output**:
+```json
+{
+  "item_code": "440113",
+  "product_description": "BID ELIANTO CORN OIL 1L",
+  "store_name": "ruaka",
+  "promo_uplift_pct": 47.3,
+  "promo_discount_depth_pct": 15.2,
+  "promo_units_sold": 156,
+  "baseline_daily_units": 8.2,
+  "promo_daily_units": 12.1
+}
 ```
 
-## Testing
+**Key Insights Enabled**:
+- Top performing SKUs by uplift
+- Optimal discount depth (15-20% sweet spot)
+- Store coverage gaps
+- Bidco vs competitor promo effectiveness
 
-### Pipeline Testing
+### 3. Pricing Index ✅
+
+**Question**: Where are Bidco prices too high/low vs competitors?
+
+**Solution**:
+- Price Index = `(Bidco Price / Competitor Avg Price in Section) × 100`
+- Multi-level analysis (overall, store, section)
+- Positioning classification (discount/at-market/premium)
+- RRP vs realized price patterns
+
+**Price Positioning**:
+- **<80**: Significant Discount
+- **80-90**: Moderate Discount
+- **90-110**: At-Market (Competitive)
+- **110-120**: Moderate Premium
+- **>120**: Significant Premium
+
+**Endpoints**:
+```http
+GET /api/price_index?bidco_only=true&store=ruaka
+GET /api/price_index/summary?view_level=Overall|Store|Section
+```
+
+**Example Output**:
+```json
+{
+  "view_level": "Overall",
+  "bidco_avg_price_index": 112.5,
+  "dominant_positioning": "Premium Positioning",
+  "premium_pct": 62.3,
+  "at_market_pct": 28.1,
+  "discount_pct": 9.6
+}
+```
+
+**Key Insights Enabled**:
+- Price gaps vs competitors by section
+- Positioning consistency across stores
+- Sections with strongest competitive pricing
+- RRP discount patterns (Bidco vs competitors)
+
+---
+
+## Data Model
+
+### Source Data
+
+**Table**: `public.retail_sales`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| Store_Name | VARCHAR | Retail outlet name |
+| Item_Code | VARCHAR | Product identifier |
+| Item_Barcode | VARCHAR | Standard barcode |
+| Description | VARCHAR | Product description |
+| Category | VARCHAR | Broad grouping (e.g., FOODS) |
+| Department | VARCHAR | Mid-level grouping |
+| Sub_Department | VARCHAR | Fine classification |
+| Section | VARCHAR | Micro-segmentation |
+| Quantity | INTEGER | Units sold |
+| Total_Sales | DECIMAL | Sales value |
+| RRP | DECIMAL | Recommended retail price |
+| Supplier | VARCHAR | Supplier/distributor |
+| Date_Of_Sale | DATE | Transaction date |
+
+### Transformation Layers
+
+#### 1. Staging (`retail_staging.stg_retail_sales`)
+
+**Purpose**: Clean, standardize, and score data quality
+
+**Key Transformations**:
+- Calculate realized unit price: `Total_Sales / Quantity`
+- Standardize store and supplier names
+- Detect promotional pricing (≥10% discount from RRP)
+- Calculate record quality scores (0-100)
+- Flag data issues (negative quantities, missing fields, outliers)
+
+**Output**: 30+ columns including quality flags and calculated metrics
+
+#### 2. Marts (`retail_marts.*`)
+
+**`promo_detection`** - Promotional analysis
+- Identifies promo periods (≥2 days at discounted prices)
+- Calculates baseline (non-promo) pricing
+- Computes uplift % vs baseline
+- Measures discount depth
+- Tracks coverage by store
+
+**`price_index`** - Competitive pricing
+- Compares Bidco vs competitors within same Section
+- Calculates price indices (100 = market average)
+- Categorizes positioning (discount/at-market/premium)
+- Shows realized vs RRP patterns
+
+#### 3. Analytics (`retail_analytics.*`)
+
+**`data_quality_summary`** - Health metrics
+- Overall dataset health
+- Quality scores by store, supplier, category
+- Reliability classifications
+- Missing data summaries
+
+**`data_quality_issues`** - Issue tracking
+- Duplicate records
+- Quantity/price outliers
+- Missing critical fields
+- Prioritized by severity
+
+**`promo_summary`** - Aggregated promo metrics
+- Coverage by supplier
+- Store-level performance
+- Category-level analysis
+
+**`pricing_summary`** - Multi-level positioning
+- Overall Bidco positioning
+- Store-level comparisons
+- Section-level trends
+
+### dbt Models
+
+```
+models/retail/
+├── staging/
+│   └── stg_retail_sales.sql          (1 model)
+├── marts/
+│   ├── promo_detection.sql           (2 models)
+│   └── price_index.sql
+└── analytics/
+    ├── data_quality_summary.sql      (4 models)
+    ├── data_quality_issues.sql
+    ├── promo_summary.sql
+    └── pricing_summary.sql
+```
+
+**Total: 7 dbt models**
+
+### Configuration Variables
+
+Edit `include/dbt/dbt_project.yml`:
+
+```yaml
+vars:
+  promo_discount_threshold: 0.10  # 10% discount to flag promo
+  promo_min_days: 2               # Minimum days for promo
+  bidco_supplier_pattern: 'BIDCO%'  # Bidco identification
+```
+
+---
+
+## API Documentation
+
+### Base URL
+`http://localhost:8001`
+
+### Interactive Docs
+http://localhost:8001/docs (Swagger UI with try-it-out functionality)
+
+### Endpoints
+
+#### Data Quality
+
+**`GET /api/data_quality`**
+- Query params: `dimension` (Store/Supplier/Category), `min_quality_score`
+- Returns health scores and reliability status
+
+**`GET /api/data_quality/issues`**
+- Query params: `issue_type`, `supplier`, `bidco_only`, `limit`
+- Returns detailed issue list with severity ratings
+
+#### Promotions
+
+**`GET /api/promo_summary`**
+- Query params: `bidco_only`, `min_uplift`, `store`, `top_n`
+- Returns SKU-level promo performance
+
+**`GET /api/promo_summary/aggregated`**
+- Returns rolled-up metrics (coverage, store performance, category analysis)
+
+#### Pricing
+
+**`GET /api/price_index`**
+- Query params: `bidco_only`, `store`, `section`, `positioning`
+- Returns competitive price comparison
+
+**`GET /api/price_index/summary`**
+- Query params: `view_level` (Overall/Store/Section), `store`
+- Returns multi-level positioning analysis
+
+#### Insights
+
+**`GET /api/insights`**
+- Returns top 3-5 actionable insights for stakeholders
+- Combines data quality, promo, and pricing intelligence
+
+**`GET /health`**
+- Health check endpoint
+
+### Example Queries
+
+**Get problematic stores:**
 ```bash
-# Test DAG import
-astro dev bash -c "python -c 'from dags.churn_pipeline import churn_prediction_pipeline'"
-
-# Test database connection
-astro dev bash -c "airflow connections test postgres_default"
-
-# Run dbt tests
-astro dev bash -c "cd include/dbt && dbt test"
+curl "http://localhost:8001/api/data_quality?dimension=Store&min_quality_score=0" | \
+  jq '[.[] | {store: .dimension_value, score: .avg_quality_score}] | sort_by(.score) | .[0:5]'
 ```
 
-### API Testing
+**Find best promo ROI:**
 ```bash
-# Health check
-curl http://localhost:8000/health
-
-# Feature endpoint
-curl "http://localhost:8000/churn-features?limit=5"
-
-# Statistics
-curl http://localhost:8000/churn-features/stats
+curl "http://localhost:8001/api/promo_summary?bidco_only=true" | \
+  jq 'sort_by(-.promo_uplift_pct) | .[0:3] | .[] | {sku: .product_description, uplift: .promo_uplift_pct, discount: .promo_discount_depth_pct}'
 ```
 
-### Data Quality Validation
+**Check price competitiveness:**
 ```bash
-# Check record counts
-astro dev bash -c "psql -h postgres -U postgres -d postgres -c 'SELECT COUNT(*) FROM public_churn_marts.churn_features;'"
-
-# Validate churn distribution
-astro dev bash -c "psql -h postgres -U postgres -d postgres -c 'SELECT churn_flag, COUNT(*) FROM public_churn_marts.churn_features GROUP BY churn_flag;'"
+curl "http://localhost:8001/api/price_index?bidco_only=true&positioning=premium" | \
+  jq '[.[] | {sku: .product_description, store: .store_name, index: .price_index_vs_competitors}]'
 ```
 
-## Deployment
+---
 
-### Local Development
-- Use `astro dev start` for local development
-- Airflow UI for pipeline monitoring
-- PostgreSQL for data inspection
-- FastAPI docs for API testing
+## Metabase Dashboards
 
-### Production Deployment
-- Deploy Airflow to Kubernetes or Astronomer Cloud
-- Use managed PostgreSQL (AWS RDS, Google Cloud SQL)
-- Deploy API to container orchestration platform
-- Configure monitoring and alerting
+### Setup
 
-### Environment Variables
-```bash
-# Database
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=<secure-password>
-POSTGRES_DB=churn_prediction
-POSTGRES_HOST=<host>
-POSTGRES_PORT=5432
+1. Navigate to http://localhost:3000
+2. Complete setup wizard (any email/password)
+3. Add PostgreSQL database:
+   - Database type: **PostgreSQL**
+   - Name: **Retail Analytics**
+   - Host: **postgres**, Port: **5432**
+   - Database: **postgres**
+   - Username: **postgres**, Password: **postgres**
 
-# API
-DATABASE_URL=postgresql://user:pass@host:port/db
-API_HOST=0.0.0.0
-API_PORT=8000
+### Available Schemas
 
-# Airflow
-AIRFLOW__CORE__LOAD_EXAMPLES=False
-AIRFLOW__WEBSERVER__EXPOSE_CONFIG=False
+- `retail_staging.stg_retail_sales` - Cleaned sales data
+- `retail_marts.promo_detection` - Promo analysis
+- `retail_marts.price_index` - Pricing data
+- `retail_analytics.*` - Aggregated metrics
+
+### Recommended Dashboard Queries
+
+#### Dashboard 1: Data Quality Scorecard
+
+**Overall Quality (Single Value)**:
+```sql
+SELECT
+  health_rating,
+  avg_quality_score,
+  reliability_status
+FROM retail_analytics.data_quality_summary
+WHERE dimension = 'Overall Dataset';
 ```
 
-## Assumptions & Design Decisions
+**Store Quality (Bar Chart)**:
+```sql
+SELECT
+  dimension_value as store,
+  avg_quality_score as score,
+  health_rating
+FROM retail_analytics.data_quality_summary
+WHERE dimension = 'Store'
+ORDER BY avg_quality_score DESC;
+```
 
-### Data Assumptions
-- **User Activities**: CSV format with consistent schema
-- **Transactions**: PostgreSQL dump with users and transactions tables
-- **Data Quality**: Source data is reasonably clean with minimal corruption
-- **Timestamps**: All timestamps are in UTC or consistent timezone
-- **User Matching**: user_id consistently links across all data sources
+**Bidco Quality Status (Scorecard)**:
+```sql
+SELECT
+  avg_quality_score,
+  low_quality_pct,
+  reliability_status
+FROM retail_analytics.data_quality_summary
+WHERE dimension = 'Supplier'
+  AND UPPER(dimension_value) LIKE '%BIDCO%';
+```
 
-### Business Logic Assumptions
-- **Churn Definition**: 30+ days of inactivity indicates churn risk
-- **Currency**: All transactions assumed to be in NGN for aggregation
-- **Deduplication**: Based on natural keys (user_id, timestamp combinations)
-- **Feature Engineering**: RFM methodology appropriate for business context
+**Issues by Type (Donut Chart)**:
+```sql
+SELECT
+  issue_type,
+  COUNT(*) as count
+FROM retail_analytics.data_quality_issues
+WHERE affects_bidco = 1
+GROUP BY issue_type;
+```
 
-### Technical Decisions
-- **PostgreSQL**: Chosen for ACID compliance and analytical capabilities
-- **dbt**: Selected for version control, testing, and SQL-based transformations
-- **Airflow**: Industry standard for workflow orchestration
-- **FastAPI**: Modern Python API framework with automatic documentation
-- **Docker**: Containerization for consistent deployment environments
+#### Dashboard 2: Promotion Performance
 
-### Scalability Considerations
-- **Incremental Processing**: Pipeline designed for daily incremental updates
-- **Resource Management**: Configurable parallelism in Airflow tasks
-- **API Performance**: Pagination and filtering to handle large datasets
-- **Database Optimization**: Indexes on frequently queried columns
+**Bidco Promo Metrics (Scorecards)**:
+```sql
+SELECT
+  COUNT(DISTINCT item_code) as skus_on_promo,
+  COUNT(DISTINCT store_name) as stores_with_promo,
+  ROUND(AVG(promo_uplift_pct), 2) as avg_uplift,
+  ROUND(AVG(promo_discount_depth_pct), 2) as avg_discount
+FROM retail_marts.promo_detection
+WHERE is_bidco = 1 AND is_on_promo = 1;
+```
 
-### Data Quality Strategy
-- **Input Validation**: Schema validation on data ingestion
-- **Transformation Testing**: dbt tests for model validation
-- **Output Verification**: Final feature validation before serving
-- **Monitoring**: Health checks and data freshness alerts
+**Top 10 Performers (Table)**:
+```sql
+SELECT
+  product_description,
+  store_name,
+  promo_uplift_pct,
+  promo_discount_depth_pct,
+  promo_units_sold
+FROM retail_marts.promo_detection
+WHERE is_bidco = 1 AND is_on_promo = 1
+ORDER BY promo_uplift_pct DESC
+LIMIT 10;
+```
+
+**Uplift vs Discount (Scatter Plot)**:
+```sql
+SELECT
+  product_description,
+  promo_discount_depth_pct as discount,
+  promo_uplift_pct as uplift,
+  CASE WHEN is_bidco = 1 THEN 'Bidco' ELSE 'Competitor' END as type
+FROM retail_marts.promo_detection
+WHERE is_on_promo = 1
+  AND promo_uplift_pct IS NOT NULL;
+```
+
+#### Dashboard 3: Pricing Intelligence
+
+**Overall Positioning (Gauge)**:
+```sql
+SELECT
+  bidco_avg_price_index,
+  dominant_positioning,
+  premium_pct,
+  at_market_pct,
+  discount_pct
+FROM retail_analytics.pricing_summary
+WHERE view_level = 'Overall';
+```
+
+**Price Index by Store (Bar Chart)**:
+```sql
+SELECT
+  store_name,
+  bidco_avg_price_index,
+  dominant_positioning
+FROM retail_analytics.pricing_summary
+WHERE view_level = 'Store'
+ORDER BY bidco_avg_price_index DESC;
+```
+
+**Positioning Distribution (Stacked Bar)**:
+```sql
+SELECT
+  store_name,
+  premium_pct,
+  at_market_pct,
+  discount_pct
+FROM retail_analytics.pricing_summary
+WHERE view_level = 'Store'
+ORDER BY premium_pct DESC;
+```
+
+**Section Comparison (Table)**:
+```sql
+SELECT
+  section,
+  ROUND(AVG(CASE WHEN is_bidco = 1 THEN avg_realized_price END), 2) as bidco_price,
+  ROUND(AVG(CASE WHEN is_bidco = 0 THEN avg_realized_price END), 2) as competitor_price,
+  ROUND(AVG(CASE WHEN is_bidco = 1 THEN price_index_vs_competitors END), 2) as price_index
+FROM retail_marts.price_index
+GROUP BY section
+ORDER BY price_index DESC;
+```
+
+---
 
 ## Troubleshooting
 
-### Common Issues
+### Issue: "CSV file not found"
 
-**Pipeline Not Starting**
 ```bash
-# Check Docker status
+# Check file location
+ls -la include/datasets/retail_sales.csv
+
+# If missing, place your file there
+cp /path/to/your/Test_Data.csv include/datasets/retail_sales.csv
+```
+
+### Issue: dbt models fail
+
+```bash
+# Run dbt manually to see errors
+astro dev bash
+cd include/dbt
+dbt debug
+dbt run --select path:models/retail
+exit
+```
+
+### Issue: API returns empty results
+
+```bash
+# Check tables exist
+astro dev bash
+psql postgresql://postgres:postgres@postgres:5432/postgres
+
+\dt retail_staging.*
+\dt retail_marts.*
+\dt retail_analytics.*
+
+SELECT COUNT(*) FROM retail_staging.stg_retail_sales;
+SELECT COUNT(*) FROM retail_marts.promo_detection;
+
+\q
+exit
+```
+
+### Issue: Services won't start
+
+```bash
+# Check Docker
 docker ps
 
-# Restart services
-astro dev restart
-
-
-# Check logs
-astro dev logs
+# Clean restart
+astro dev stop
+docker-compose down -v
+astro dev start
 ```
-![Codebase](images/codebase.png)
 
-**Database Connection Errors**
+### View Logs
+
 ```bash
-# Verify connection
-astro dev bash -c "airflow connections list | grep postgres"
+# Airflow UI: http://localhost:8080 → DAG → Task → Logs
 
-# Test connection
-astro dev bash -c "airflow connections test postgres_default"
+# Container logs
+docker-compose logs -f retail-api
+docker-compose logs -f postgres
+
+# dbt logs
+cat include/dbt/logs/dbt.log
 ```
 
-**dbt Model Failures**
-```bash
-# Debug dbt connection
-astro dev bash -c "cd include/dbt && dbt debug"
+---
 
-# Run specific model
-astro dev bash -c "cd include/dbt && dbt run --select stg_users"
+## Project Structure
+
+```
+retail-analytics-pipeline/
+├── dags/
+│   └── retail_analytics_pipeline.py        # Airflow DAG
+│
+├── include/
+│   ├── dbt/
+│   │   ├── models/
+│   │   │   └── retail/
+│   │   │       ├── staging/
+│   │   │       │   └── stg_retail_sales.sql
+│   │   │       ├── marts/
+│   │   │       │   ├── promo_detection.sql
+│   │   │       │   └── price_index.sql
+│   │   │       ├── analytics/
+│   │   │       │   ├── data_quality_summary.sql
+│   │   │       │   ├── data_quality_issues.sql
+│   │   │       │   ├── promo_summary.sql
+│   │   │       │   └── pricing_summary.sql
+│   │   │       └── schema.yml
+│   │   ├── macros/
+│   │   │   └── retail_utils.sql            # Reusable macros
+│   │   ├── dbt_project.yml
+│   │   └── profiles.yml
+│   │
+│   ├── api/
+│   │   ├── retail_api.py                   # FastAPI (port 8001)
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   │
+│   └── datasets/
+│       └── retail_sales.csv                # ** YOUR DATA HERE **
+│
+├── docker-compose.override.yml
+├── Dockerfile
+├── requirements.txt
+└── README.md
 ```
 
-**API Not Accessible**
-```bash
-# Check container status
-docker ps | grep churn-api
+---
 
-# Check API logs
-docker logs <api-container-name>
+## Performance Optimization
+
+### For Large Datasets (>1M rows)
+
+**1. Add Database Indexes:**
+```sql
+CREATE INDEX idx_retail_sales_store ON public.retail_sales(Store_Name);
+CREATE INDEX idx_retail_sales_supplier ON public.retail_sales(Supplier);
+CREATE INDEX idx_retail_sales_date ON public.retail_sales(Date_Of_Sale);
+CREATE INDEX idx_retail_sales_item ON public.retail_sales(Item_Code);
 ```
 
-### Performance Optimization
+**2. Materialize Staging as Table:**
 
-**Large Dataset Processing**
-- Increase Airflow worker memory allocation
-- Use database connection pooling
-- Implement data partitioning strategies
-- Configure appropriate batch sizes
+Edit `include/dbt/models/retail/staging/stg_retail_sales.sql`:
+```sql
+{{
+  config(
+    materialized='table',  -- Change from 'view'
+    indexes=[
+      {'columns': ['store_name'], 'type': 'btree'},
+      {'columns': ['supplier'], 'type': 'btree'},
+    ]
+  )
+}}
+```
 
-**API Response Times**
-- Add database indexes on filtered columns
-- Implement API response caching
-- Use connection pooling
-- Consider read replicas for query workloads
+**3. Use Incremental Models:**
+
+For daily loads:
+```sql
+{{
+  config(
+    materialized='incremental',
+    unique_key='sales_record_id'
+  )
+}}
+
+SELECT * FROM {{ source('retail_raw', 'retail_sales') }}
+{% if is_incremental() %}
+  WHERE Date_Of_Sale > (SELECT MAX(sale_date) FROM {{ this }})
+{% endif %}
+```
+
+---
 
 ## Future Enhancements
 
-### Short Term
-- **Real-time Processing**: Stream processing for live churn scoring
-- **Advanced Features**: Time-series features and seasonality analysis
-- **Model Integration**: Direct ML model serving endpoints
-- **Enhanced Monitoring**: Comprehensive data quality dashboards
-
-### Long Term
-- **Multi-tenant Architecture**: Support for multiple business units
-- **Advanced Analytics**: Cohort analysis and customer segmentation
-- **Data Lineage**: Comprehensive data governance and lineage tracking
-- **AutoML Integration**: Automated model training and deployment
-
-### Infrastructure
-- **Cloud Migration**: Deploy to AWS/GCP/Azure
-- **Kubernetes**: Container orchestration for production
-- **CI/CD Pipeline**: Automated testing and deployment
-- **Security**: Authentication, authorization, and data encryption
+- [ ] Time-series forecasting for demand
+- [ ] Store clustering by performance
+- [ ] SKU recommendation engine
+- [ ] Real-time price monitoring
+- [ ] Automated competitive gap alerts
+- [ ] Seasonality and trend analysis
+- [ ] Price elasticity modeling
+- [ ] Market basket analysis
+- [ ] CI/CD pipeline (GitHub Actions)
+- [ ] Data quality alerting (Great Expectations)
+- [ ] API authentication (OAuth2)
+- [ ] Redis caching for API responses
 
 ---
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Support
 
-For questions and support:
-- **Documentation**: Check this README and API docs
-- **Issues**: Create GitHub issues for bugs and feature requests
-- **Discussion**: Use GitHub Discussions for questions
+- **Airflow Logs**: http://localhost:8080 → DAG → Task → Logs
+- **dbt Logs**: `include/dbt/logs/dbt.log`
+- **Container Logs**: `docker-compose logs -f <service>`
+- **API Docs**: http://localhost:8001/docs
 
 ---
 
-**Built with**: Apache Airflow, dbt, FastAPI, PostgreSQL, Docker
-**Designed for**: Scalable ML data pipeline workflows
+**Built with**: Apache Airflow • dbt • FastAPI • PostgreSQL • Metabase • Docker
+
+**Architecture**: ELT (Extract, Load, Transform) with orchestration and API serving
+
+**Client**: Bidco Africa - Retail Performance Analytics
