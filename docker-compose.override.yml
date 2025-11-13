@@ -16,12 +16,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - default
+      - shared_network
 
   retail-api:
     build:
       context: ./include/api
       dockerfile: Dockerfile
-    command: python retail_api.py
     ports:
       - "8001:8001"
     environment:
@@ -37,6 +39,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - shared_network
 
   metabase:
     image: metabase/metabase:v0.47.4
@@ -55,7 +59,13 @@ services:
     volumes:
       - metabase_data:/metabase-data
     restart: always
+    networks:
+      - shared_network
 
 volumes:
   postgres_data:
   metabase_data:
+
+networks:
+  shared_network:
+    driver: bridge

@@ -19,3 +19,5 @@ psycopg2-binary>=2.9.9
 
 # Additional utilities for Airflow 3.x
 pendulum>=3.0.0
+
+astro-run-dag # This package is needed for the astro run command. It will be removed before a deploy
