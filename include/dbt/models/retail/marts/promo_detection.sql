@@ -65,8 +65,8 @@ promo_periods AS (
         sb.baseline_price,
         sb.baseline_rrp,
         -- Calculate discount depth vs baseline
-        ROUND(((COALESCE(sb.baseline_price, sdp.avg_daily_rrp) - sdp.avg_daily_price) /
-               NULLIF(COALESCE(sb.baseline_price, sdp.avg_daily_rrp), 0) * 100), 2) as discount_depth_pct,
+        ROUND(CAST(((COALESCE(sb.baseline_price, sdp.avg_daily_rrp) - sdp.avg_daily_price) /
+               NULLIF(COALESCE(sb.baseline_price, sdp.avg_daily_rrp), 0) * 100) AS NUMERIC), 2) as discount_depth_pct,
         -- Flag as promo if >= 10% discount from baseline
         CASE
             WHEN sdp.avg_daily_price <= (COALESCE(sb.baseline_price, sdp.avg_daily_rrp) * (1 - {{ var('promo_discount_threshold') }}))
@@ -114,7 +114,7 @@ promo_classification AS (
             THEN 1
             ELSE 0
         END as is_on_promo,
-        ROUND(pdc.promo_days * 100.0 / pdc.total_days, 2) as promo_days_pct
+        ROUND(CAST(pdc.promo_days * 100.0 / pdc.total_days AS NUMERIC), 2) as promo_days_pct
     FROM promo_day_count pdc
 ),
 
@@ -160,13 +160,14 @@ with_uplift AS (
     SELECT
         *,
         -- Calculate average daily units
-        ROUND(COALESCE(promo_units_sold, 0) / NULLIF(promo_days, 0), 2) as avg_daily_promo_units,
-        ROUND(COALESCE(non_promo_units_sold, 0) / NULLIF((total_days - promo_days), 0), 2) as avg_daily_non_promo_units,
+        ROUND(CAST(COALESCE(promo_units_sold, 0) / NULLIF(promo_days, 0) AS NUMERIC), 2) as avg_daily_promo_units,
+        ROUND(CAST(COALESCE(non_promo_units_sold, 0) / NULLIF((total_days - promo_days), 0) AS NUMERIC), 2) as avg_daily_non_promo_units,
         -- Promo uplift %
-        ROUND(
+        ROUND(CAST(
             ((COALESCE(promo_units_sold, 0) / NULLIF(promo_days, 0)) -
              (COALESCE(non_promo_units_sold, 0) / NULLIF((total_days - promo_days), 0))) /
-            NULLIF((COALESCE(non_promo_units_sold, 0) / NULLIF((total_days - promo_days), 0)), 0) * 100,
+            NULLIF((COALESCE(non_promo_units_sold, 0) / NULLIF((total_days - promo_days), 0)), 0) * 100
+            AS NUMERIC),
         2) as promo_uplift_pct
     FROM promo_metrics
 )

@@ -26,7 +26,7 @@ promo_coverage AS (
 ),
 
 -- Top performing SKUs by uplift
-top_skus_by_uplift AS (
+top_skus_by_uplift_ranked AS (
     SELECT
         'By Promo Uplift' as ranking_criteria,
         supplier,
@@ -41,11 +41,14 @@ top_skus_by_uplift AS (
         ROW_NUMBER() OVER (PARTITION BY is_bidco ORDER BY promo_uplift_pct DESC NULLS LAST) as rank
     FROM promo_data
     WHERE promo_uplift_pct IS NOT NULL
-    QUALIFY rank <= 10
+),
+
+top_skus_by_uplift AS (
+    SELECT * FROM top_skus_by_uplift_ranked WHERE rank <= 10
 ),
 
 -- Top performing SKUs by volume
-top_skus_by_volume AS (
+top_skus_by_volume_ranked AS (
     SELECT
         'By Promo Volume' as ranking_criteria,
         supplier,
@@ -59,7 +62,10 @@ top_skus_by_volume AS (
         promo_sales_value,
         ROW_NUMBER() OVER (PARTITION BY is_bidco ORDER BY promo_units_sold DESC) as rank
     FROM promo_data
-    QUALIFY rank <= 10
+),
+
+top_skus_by_volume AS (
+    SELECT * FROM top_skus_by_volume_ranked WHERE rank <= 10
 ),
 
 -- Store-level promo performance

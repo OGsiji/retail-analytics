@@ -7,7 +7,7 @@ retail_analytics:
       user: postgres
       password: postgres
       port: 5432
-      dbname: postgres
+      database: postgres
       schema: public
       threads: 4
       keepalives_idle: 0

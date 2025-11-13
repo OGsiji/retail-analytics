@@ -1,4 +1,4 @@
-FROM quay.io/astronomer/astro-runtime:11.8.0
+FROM astrocrpublic.azurecr.io/runtime:3.1-4
 
 USER root
 RUN apt-get update && apt-get install -y postgresql-client && \
@@ -7,5 +7,6 @@ RUN apt-get update && apt-get install -y postgresql-client && \
 USER astro
 
 # Retail example pattern - works perfectly with Cosmos
+# Using dbt 1.7.18 compatible with Airflow 3.1.2
 RUN python -m venv dbt_venv && source dbt_venv/bin/activate && \
-    pip install --no-cache-dir dbt-postgres==1.6.8 dbt-core==1.6.8 && deactivate
+    pip install --no-cache-dir dbt-postgres==1.7.18 dbt-core==1.7.18 && deactivate

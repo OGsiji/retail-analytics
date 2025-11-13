@@ -50,15 +50,15 @@
 -- Calculate data quality score for a record
 {% macro calculate_record_quality_score() %}
     (
-        CASE WHEN Store_Name IS NOT NULL THEN 1 ELSE 0 END +
-        CASE WHEN Item_Code IS NOT NULL THEN 1 ELSE 0 END +
-        CASE WHEN Item_Barcode IS NOT NULL THEN 1 ELSE 0 END +
-        CASE WHEN Description IS NOT NULL THEN 1 ELSE 0 END +
-        CASE WHEN Quantity IS NOT NULL AND Quantity > 0 THEN 1 ELSE 0 END +
-        CASE WHEN Total_Sales IS NOT NULL AND Total_Sales >= 0 THEN 1 ELSE 0 END +
-        CASE WHEN RRP IS NOT NULL AND RRP > 0 THEN 1 ELSE 0 END +
-        CASE WHEN Supplier IS NOT NULL THEN 1 ELSE 0 END +
-        CASE WHEN Date_Of_Sale IS NOT NULL THEN 1 ELSE 0 END
+        CASE WHEN "Store_Name" IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN "Item_Code" IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN "Item_Barcode" IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN "Description" IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN "Quantity" IS NOT NULL AND "Quantity" > 0 THEN 1 ELSE 0 END +
+        CASE WHEN "Total_Sales" IS NOT NULL AND "Total_Sales" >= 0 THEN 1 ELSE 0 END +
+        CASE WHEN "RRP" IS NOT NULL AND "RRP" > 0 THEN 1 ELSE 0 END +
+        CASE WHEN "Supplier" IS NOT NULL THEN 1 ELSE 0 END +
+        CASE WHEN "Date_Of_Sale" IS NOT NULL THEN 1 ELSE 0 END
     ) / 9.0 * 100
 {% endmacro %}
 
@@ -68,7 +68,7 @@
         WHEN {{ quantity }} IS NULL THEN 1
         WHEN {{ quantity }} < 0 THEN 1
         WHEN {{ quantity }} > (
-            SELECT AVG(Quantity) + ({{ std_devs }} * STDDEV(Quantity))
+            SELECT AVG("Quantity") + ({{ std_devs }} * STDDEV("Quantity"))
             FROM {{ source('retail_raw', 'retail_sales') }}
         ) THEN 1
         ELSE 0

@@ -13,11 +13,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
-from airflow.operators.empty import EmptyOperator
-from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
-from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig
+from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig, RenderConfig
 from cosmos.profiles import PostgresUserPasswordProfileMapping
 
 import pandas as pd
@@ -56,25 +55,58 @@ def load_csv_to_postgres(**context):
     ]
 
     # Convert date column
-    df['Date_Of_Sale'] = pd.to_datetime(df['Date_Of_Sale'])
+    df['Date_Of_Sale'] = pd.to_datetime(df['Date_Of_Sale']).dt.date
 
     # Connect to PostgreSQL
     pg_hook = PostgresHook(postgres_conn_id='postgres_default')
-    engine = pg_hook.get_sqlalchemy_engine()
 
-    # Load data (replace existing)
-    df.to_sql(
-        'retail_sales',
-        engine,
-        schema='public',
-        if_exists='replace',
-        index=False,
-        method='multi',
-        chunksize=1000
-    )
+    # Drop and recreate table (using quoted column names to preserve case)
+    # Use CASCADE to drop dependent views created by dbt
+    pg_hook.run("""
+        DROP TABLE IF EXISTS public.retail_sales CASCADE;
+        CREATE TABLE public.retail_sales (
+            "Store_Name" VARCHAR(255),
+            "Item_Code" VARCHAR(100),
+            "Item_Barcode" VARCHAR(100),
+            "Description" TEXT,
+            "Category" VARCHAR(100),
+            "Department" VARCHAR(100),
+            "Sub_Department" VARCHAR(100),
+            "Section" VARCHAR(100),
+            "Quantity" NUMERIC,
+            "Total_Sales" NUMERIC,
+            "RRP" NUMERIC,
+            "Supplier" VARCHAR(255),
+            "Date_Of_Sale" DATE
+        );
+    """)
 
-    row_count = len(df)
-    print(f"Successfully loaded {row_count} rows into retail_sales table")
+    # Insert data using COPY command (much faster than individual inserts)
+    from io import StringIO
+
+    # Create CSV string buffer
+    buffer = StringIO()
+    df.to_csv(buffer, index=False, header=False, sep='\t')
+    buffer.seek(0)
+
+    # Use COPY command for bulk insert
+    conn = pg_hook.get_conn()
+    cursor = conn.cursor()
+
+    try:
+        cursor.copy_from(
+            buffer,
+            'retail_sales',
+            sep='\t',
+            null='',
+            columns=list(df.columns)
+        )
+        conn.commit()
+        row_count = len(df)
+        print(f"Successfully loaded {row_count} rows into retail_sales table")
+    finally:
+        cursor.close()
+        conn.close()
 
     return row_count
 
@@ -118,29 +150,33 @@ def generate_insights_summary(**context):
     Generate summary of key insights for stakeholders
     """
     pg_hook = PostgresHook(postgres_conn_id='postgres_default')
+    conn = pg_hook.get_conn()
 
-    # Get data quality summary
-    dq_summary = pg_hook.get_pandas_df("""
-        SELECT dimension, dimension_value, health_rating, reliability_status
-        FROM retail_analytics.data_quality_summary
-        WHERE dimension = 'Overall Dataset'
-    """)
+    try:
+        # Get data quality summary
+        dq_summary = pd.read_sql("""
+            SELECT dimension, dimension_value, health_rating, reliability_status
+            FROM retail_analytics.data_quality_summary
+            WHERE dimension = 'Overall Dataset'
+        """, conn)
 
-    # Get top promo performers for Bidco
-    top_promos = pg_hook.get_pandas_df("""
-        SELECT product_description, store_name, promo_uplift_pct, promo_discount_depth_pct
-        FROM retail_marts.promo_detection
-        WHERE is_bidco = 1 AND is_on_promo = 1
-        ORDER BY promo_uplift_pct DESC
-        LIMIT 5
-    """)
+        # Get top promo performers for Bidco
+        top_promos = pd.read_sql("""
+            SELECT product_description, store_name, promo_uplift_pct, promo_discount_depth_pct
+            FROM retail_marts.promo_detection
+            WHERE is_bidco = 1 AND is_on_promo = 1
+            ORDER BY promo_uplift_pct DESC
+            LIMIT 5
+        """, conn)
 
-    # Get Bidco pricing position
-    price_position = pg_hook.get_pandas_df("""
-        SELECT view_level, dominant_positioning, bidco_avg_price_index
-        FROM retail_analytics.pricing_summary
-        WHERE view_level = 'Overall'
-    """)
+        # Get Bidco pricing position
+        price_position = pd.read_sql("""
+            SELECT view_level, dominant_positioning, bidco_avg_price_index
+            FROM retail_analytics.pricing_summary
+            WHERE view_level = 'Overall'
+        """, conn)
+    finally:
+        conn.close()
 
     insights = {
         'data_quality': dq_summary.to_dict('records'),
@@ -162,14 +198,15 @@ def generate_insights_summary(**context):
     return insights
 
 
-# DAG definition
+# DAG definition - Updated for Airflow 3.1.2 (Latest!)
 with DAG(
     'retail_analytics_pipeline',
     default_args=default_args,
     description='End-to-end retail analytics pipeline for Bidco Africa analysis',
-    schedule_interval='@daily',  # Run daily
+    schedule='@daily',  # Airflow 3.x parameter (schedule instead of schedule_interval)
     catchup=False,
-    tags=['retail', 'analytics', 'bidco'],
+    tags=['retail', 'analytics', 'bidco', 'airflow-3.1'],
+    doc_md=__doc__,  # Airflow 3.x enhanced documentation support
 ) as dag:
 
     # Start task
@@ -195,6 +232,7 @@ with DAG(
             conn_id='postgres_default',
             profile_args={
                 'schema': 'public',
+                'database': 'postgres',  # Required for dbt 1.10+
             },
         ),
     )
@@ -207,16 +245,20 @@ with DAG(
         dbt_executable_path='/usr/local/bin/dbt',
     )
 
+    dbt_render_config = RenderConfig(
+        select=['path:models/retail'],  # Only run retail models
+    )
+
     # dbt task group for retail models
     retail_dbt_models = DbtTaskGroup(
         group_id='retail_dbt_transform',
         project_config=dbt_project_config,
         profile_config=dbt_profile_config,
         execution_config=dbt_execution_config,
+        render_config=dbt_render_config,
         operator_args={
             'install_deps': True,
         },
-        select=['path:models/retail'],  # Only run retail models
     )
 
     # Generate insights summary
