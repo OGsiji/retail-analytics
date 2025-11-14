@@ -16,6 +16,18 @@ This pipeline processes retail sales data to deliver actionable insights through
 - **API Layer**: FastAPI serving analytical results
 - **Visualization**: Metabase dashboards (optional)
 
+### Pipeline Workflow
+
+The complete data pipeline orchestrates the following tasks in Airflow:
+
+![Airflow Pipeline](images/airflow.png)
+
+**Pipeline Stages:**
+1. **Data Ingestion** - Load raw retail sales data into PostgreSQL
+2. **dbt Transformation** - Execute dbt models for data quality, pricing index, and promo analysis
+3. **API Deployment** - FastAPI serves transformed data through REST endpoints
+4. **Dashboard Updates** - Metabase visualizes key metrics and insights
+
 ## Requirements Mapping
 
 ### 1. Data Health ✅
@@ -176,6 +188,20 @@ See comprehensive endpoint documentation at: http://localhost:8001/docs
    curl http://localhost:8001/api/insights
    ```
 
+### Visual Walkthrough
+
+**Airflow Pipeline Execution:**
+
+Navigate to [http://localhost:8080](http://localhost:8080) to monitor the complete ETL workflow:
+
+![Airflow DAG](images/airflow.png)
+
+**Metabase Analytics Dashboard:**
+
+Access [http://localhost:3000](http://localhost:3000) for interactive visualizations:
+
+![Analytics Dashboard](images/metabase.png)
+
 ## Key Assumptions & Limitations
 
 ### Data Assumptions
@@ -194,12 +220,29 @@ See comprehensive endpoint documentation at: http://localhost:8001/docs
 
 ## Commercial Insights for Bidco Stakeholders
 
+### Interactive Dashboard
+
+Access real-time analytics through the Metabase dashboard:
+
+![Metabase Dashboard](images/metabase.png)
+
+**Dashboard Features:**
+- **Total Sales Overview** - 14M+ KES in total sales with Bidco's 7.8% market share
+- **Top 10 Performing Products** - Real-time ranking by sales value
+- **Daily Sales Trends** - Week-over-week performance tracking
+- **Store Performance** - Comparative analysis across all retail locations
+
 ### 1. Promotional Strategy Optimization
 
 **What We Found:**
 - Identifies which discount depths drive optimal uplift
 - Shows which stores respond best to promotions
 - Reveals category-specific promo effectiveness
+
+**Actionable Insights:**
+- Determine optimal discount levels (10%, 15%, 20%+) per product category
+- Identify high-performing store clusters for targeted promotions
+- Calculate ROI for promotional campaigns based on uplift vs discount depth
 
 ### 2. Competitive Pricing Position
 
@@ -208,12 +251,22 @@ See comprehensive endpoint documentation at: http://localhost:8001/docs
 - Store-by-store pricing competitiveness
 - Category gaps where Bidco is over/under-priced
 
+**Actionable Insights:**
+- Adjust pricing strategy per store to maintain competitive positioning
+- Identify categories where Bidco can increase margins without losing competitiveness
+- Monitor competitor price movements and respond strategically
+
 ### 3. Data Quality & Operational Excellence
 
 **What We Found:**
 - Unreliable stores with poor data quality
 - Systematic data issues (missing barcodes, invalid prices)
 - Supplier-level data health
+
+**Actionable Insights:**
+- Prioritize data quality improvements at underperforming stores
+- Implement data validation at point of capture to prevent quality issues
+- Track supplier-level metrics to ensure consistent reporting
 
 ## License
 
