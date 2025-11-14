@@ -28,11 +28,13 @@ The complete data pipeline orchestrates the following tasks in Airflow:
 3. **API Deployment** - FastAPI serves transformed data through REST endpoints
 4. **Dashboard Updates** - Metabase visualizes key metrics and insights
 
+
+![Airflow Pipeline2](images/airflow2.png)
+
 ## Requirements Mapping
 
 ### 1. Data Health ✅
 
-![Fastapi Docs](images/fastapi.png)
 
 **Endpoints:**
 - `GET /api/data_quality` - Overall health scores by dimension
@@ -138,6 +140,8 @@ Price Index = (Bidco Avg Price / Competitor Avg Price in Section) × 100
 - `discount_pct`, `at_market_pct`, `premium_pct` - Distribution of SKUs
 
 ## API Endpoints Reference
+![Fastapi Docs](images/fastapi.png)
+
 
 ### Base URL
 ```
