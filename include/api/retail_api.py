@@ -11,6 +11,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
 from typing import Optional, List, Dict, Any
 import pandas as pd
+import numpy as np
+import math
 from sqlalchemy import create_engine, text
 import os
 import logging
@@ -42,7 +44,7 @@ app = FastAPI(
 class DataQualityMetric(BaseModel):
     """Data quality metric model"""
     dimension: str
-    dimension_value: str
+    dimension_value: Optional[str] = None
     total_records: int
     high_quality_records: int
     low_quality_records: int
@@ -130,6 +132,36 @@ def execute_query(query: str, params: dict = None) -> pd.DataFrame:
         )
 
 
+def clean_dataframe_for_json(df: pd.DataFrame) -> List[Dict]:
+    """
+    Convert DataFrame to JSON-serializable list of dicts.
+    Replaces NaN, Inf, and -Inf with None.
+    """
+    # Make a copy to avoid modifying original
+    df = df.copy()
+
+    # Replace inf/-inf with NaN first
+    df = df.replace([np.inf, -np.inf], np.nan)
+
+    # Convert to dict and manually replace NaN with None
+    records = df.to_dict('records')
+
+    # Replace any remaining NaN values with None
+    cleaned_records = []
+    for record in records:
+        cleaned_record = {}
+        for key, value in record.items():
+            if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+                cleaned_record[key] = None
+            elif pd.isna(value):
+                cleaned_record[key] = None
+            else:
+                cleaned_record[key] = value
+        cleaned_records.append(cleaned_record)
+
+    return cleaned_records
+
+
 # ============================================================================
 # API Endpoints
 # ============================================================================
@@ -165,7 +197,7 @@ async def health_check():
         }
 
 
-@app.get("/api/data_quality", response_model=List[DataQualityMetric])
+@app.get("/api/data_quality")
 async def get_data_quality(
     dimension: Optional[str] = Query(
         None,
@@ -218,7 +250,7 @@ async def get_data_quality(
     if df.empty:
         return []
 
-    return df.to_dict('records')
+    return clean_dataframe_for_json(df)
 
 
 @app.get("/api/data_quality/issues")
@@ -271,10 +303,10 @@ async def get_data_quality_issues(
 
     df = execute_query(query, params)
 
-    return df.to_dict('records')
+    return clean_dataframe_for_json(df)
 
 
-@app.get("/api/promo_summary", response_model=List[PromoPerformance])
+@app.get("/api/promo_summary")
 async def get_promo_summary(
     bidco_only: bool = Query(False, description="Show only Bidco products"),
     min_uplift: Optional[float] = Query(None, description="Minimum promo uplift %"),
@@ -324,7 +356,7 @@ async def get_promo_summary(
 
     df = execute_query(query, params)
 
-    return df.to_dict('records')
+    return clean_dataframe_for_json(df)
 
 
 @app.get("/api/promo_summary/aggregated")
@@ -351,7 +383,25 @@ async def get_promo_aggregated():
     ORDER BY metric_type, is_bidco DESC NULLS LAST
     """
 
-    df = execute_query(query)
+    try:
+        df = execute_query(query)
+    except Exception as e:
+        # Return empty structure if table doesn't exist or has no data
+        return {
+            'promo_coverage': [],
+            'store_performance': [],
+            'category_analysis': [],
+            'message': 'No data available. Please run the DAG first.'
+        }
+
+    # Return empty structure if no data
+    if df.empty:
+        return {
+            'promo_coverage': [],
+            'store_performance': [],
+            'category_analysis': [],
+            'message': 'No promotion data available yet.'
+        }
 
     # Transform into more readable structure
     result = {
@@ -362,37 +412,45 @@ async def get_promo_aggregated():
 
     for _, row in df.iterrows():
         metric_type = row['metric_type']
+        # Clean NaN/None values
+        def clean_value(val):
+            if pd.isna(val):
+                return None
+            if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+                return None
+            return val
+
         if metric_type == 'promo_coverage':
             result['promo_coverage'].append({
-                'supplier': row['supplier'],
-                'is_bidco': row['is_bidco'],
-                'stores_with_promo': row['metric_value_1'],
-                'skus_on_promo': row['metric_value_2'],
-                'avg_uplift_pct': row['metric_value_3'],
-                'avg_discount_depth_pct': row['metric_value_4']
+                'supplier': clean_value(row['supplier']),
+                'is_bidco': clean_value(row['is_bidco']),
+                'stores_with_promo': clean_value(row['metric_value_1']),
+                'skus_on_promo': clean_value(row['metric_value_2']),
+                'avg_uplift_pct': clean_value(row['metric_value_3']),
+                'avg_discount_depth_pct': clean_value(row['metric_value_4'])
             })
         elif metric_type == 'store_performance':
             result['store_performance'].append({
-                'store_name': row['store_name'],
-                'bidco_skus_on_promo': row['metric_value_1'],
-                'competitor_skus_on_promo': row['metric_value_2'],
-                'bidco_avg_uplift': row['metric_value_3'],
-                'competitor_avg_uplift': row['metric_value_4']
+                'store_name': clean_value(row['store_name']),
+                'bidco_skus_on_promo': clean_value(row['metric_value_1']),
+                'competitor_skus_on_promo': clean_value(row['metric_value_2']),
+                'bidco_avg_uplift': clean_value(row['metric_value_3']),
+                'competitor_avg_uplift': clean_value(row['metric_value_4'])
             })
         elif metric_type == 'category_analysis':
             result['category_analysis'].append({
-                'sub_department': row['sub_department'],
-                'section': row['section'],
-                'bidco_skus': row['metric_value_1'],
-                'competitor_skus': row['metric_value_2'],
-                'bidco_avg_uplift': row['metric_value_3'],
-                'competitor_avg_uplift': row['metric_value_4']
+                'sub_department': clean_value(row['sub_department']),
+                'section': clean_value(row['section']),
+                'bidco_skus': clean_value(row['metric_value_1']),
+                'competitor_skus': clean_value(row['metric_value_2']),
+                'bidco_avg_uplift': clean_value(row['metric_value_3']),
+                'competitor_avg_uplift': clean_value(row['metric_value_4'])
             })
 
     return result
 
 
-@app.get("/api/price_index", response_model=List[PriceIndex])
+@app.get("/api/price_index")
 async def get_price_index(
     bidco_only: bool = Query(False, description="Show only Bidco products"),
     store: Optional[str] = Query(None, description="Filter by store"),
@@ -445,10 +503,10 @@ async def get_price_index(
 
     df = execute_query(query, params)
 
-    return df.to_dict('records')
+    return clean_dataframe_for_json(df)
 
 
-@app.get("/api/price_index/summary", response_model=List[PricingSummary])
+@app.get("/api/price_index/summary")
 async def get_pricing_summary(
     view_level: Optional[str] = Query(
         None,
@@ -499,7 +557,7 @@ async def get_pricing_summary(
 
     df = execute_query(query, params)
 
-    return df.to_dict('records')
+    return clean_dataframe_for_json(df)
 
 
 @app.get("/api/insights")

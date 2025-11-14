@@ -239,6 +239,7 @@ with DAG(
 
     dbt_project_config = ProjectConfig(
         dbt_project_path='/usr/local/airflow/include/dbt',
+        manifest_path='/usr/local/airflow/include/dbt/target/manifest.json',
     )
 
     dbt_execution_config = ExecutionConfig(
@@ -246,7 +247,7 @@ with DAG(
     )
 
     dbt_render_config = RenderConfig(
-        select=['path:models/retail'],  # Only run retail models
+        load_method=LoadMode.DBT_MANIFEST,  # Read manifest.json directly for instant parsing
     )
 
     # dbt task group for retail models

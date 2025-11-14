@@ -35,7 +35,7 @@ models:
 vars:
   # Retail Analytics Variables
   promo_discount_threshold: 0.10  # 10% discount threshold for promo detection
-  promo_min_days: 2  # Minimum days for promo classification
+  promo_min_days: 1  # Minimum days for promo classification (lowered for short data periods)
   bidco_supplier_pattern: 'BIDCO%'  # Pattern to identify Bidco products
 
 seeds:

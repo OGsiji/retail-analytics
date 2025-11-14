@@ -1,7 +1,11 @@
 {{
   config(
     materialized='table',
-    schema='retail_analytics'
+    schema='retail_analytics',
+    post_hook=[
+      "CREATE INDEX IF NOT EXISTS idx_pricing_summary_view ON {{ this }}(view_level)",
+      "CREATE INDEX IF NOT EXISTS idx_pricing_summary_store ON {{ this }}(store_name)"
+    ]
   )
 }}
 

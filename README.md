@@ -1,367 +1,220 @@
-# Retail Analytics Pipeline
-
-> **End-to-end retail analytics platform built with Apache Airflow 3.1.2, dbt, FastAPI, and Metabase**
-
-A production-ready data pipeline for retail analytics, designed for Bidco Africa to analyze sales performance, detect promotions, monitor pricing strategies, and assess data quality across retail locations.
-
----
-
-## 📋 Table of Contents
-
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Technology Stack](#-technology-stack)
-- [Prerequisites](#-prerequisites)
-- [Quick Start](#-quick-start)
-- [Deployment Guide](#-deployment-guide)
-- [Project Structure](#-project-structure)
-- [Business Questions Answered](#-business-questions-answered)
-- [API Documentation](#-api-documentation)
-- [Metabase Dashboards](#-metabase-dashboards)
-- [Troubleshooting](#-troubleshooting)
-
----
-
-## ✨ Features
-
-- **Automated ETL Pipeline**: Daily orchestration of data ingestion, transformation, and analytics
-- **Data Quality Monitoring**: Automated validation and quality scoring of retail data
-- **Promotion Detection**: Intelligent algorithm to identify promotional periods and measure uplift
-- **Competitive Pricing Analysis**: Track Bidco's price positioning against competitors
-- **REST API**: FastAPI service for programmatic access to analytics insights
-- **Interactive Dashboards**: Metabase visualizations for business intelligence
-- **Production-Grade Infrastructure**: Built on Apache Airflow 3.1.2 with modern best practices
-
----
-
-## 🏗️ Architecture
-
-\`\`\`
-┌─────────────────┐
-│   CSV Data      │
-│  (Retail Sales) │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────┐
-│         Apache Airflow 3.1.2                │
-│  ┌──────────────────────────────────────┐   │
-│  │  DAG: retail_analytics_pipeline      │   │
-│  │                                      │   │
-│  │  1. Load CSV → PostgreSQL            │   │
-│  │  2. Validate Data                    │   │
-│  │  3. dbt Transformations              │   │
-│  │  4. Generate Insights Summary        │   │
-│  └──────────────────────────────────────┘   │
-└─────────────────┬───────────────────────┘
-                  │
-                  ▼
-         ┌─────────────────┐
-         │  PostgreSQL 15  │
-         │                 │
-         │  Schemas:       │
-         │  - public       │
-         │  - retail_staging│
-         │  - retail_marts │
-         │  - retail_analytics│
-         └────┬────────┬───┘
-              │        │
-      ┌───────┘        └────────┐
-      ▼                         ▼
-┌─────────────┐         ┌──────────────┐
-│  FastAPI    │         │  Metabase    │
-│  Port: 8001 │         │  Port: 3000  │
-└─────────────┘         └──────────────┘
-\`\`\`
-
----
-
-## 🛠️ Technology Stack
-
-| Component | Technology | Version | Purpose |
-|-----------|-----------|---------|---------|
-| **Orchestration** | Apache Airflow | 3.1.2 | Workflow management |
-| **Runtime** | Astronomer Runtime | 3.1-4 | Airflow distribution |
-| **Transformation** | dbt Core | 1.7.18 | SQL-based transformations |
-| **Database** | PostgreSQL | 15 | Data warehouse |
-| **API** | FastAPI | 0.104+ | REST API service |
-| **Visualization** | Metabase | 0.47.4 | Business intelligence |
-| **Language** | Python | 3.12 | Backend logic |
-| **Container** | Docker | Latest | Containerization |
-
----
-
-## 📦 Prerequisites
-
-- **Docker Desktop**: Version 20.10+ with 8GB+ RAM allocated
-- **Astronomer CLI**: Install via \`brew install astro\` (macOS) or from https://www.astronomer.io/docs/astro/cli/install-cli
-- **System Resources**: Minimum 8GB RAM, 20GB disk space
-
----
-
-## 🚀 Quick Start
-
-### Step 1: Clone and Prepare Data
-
-\`\`\`bash
-git clone <repository-url>
-cd retail-analytics-pipeline
-
-# Place your CSV file
-cp /path/to/retail_sales.csv include/datasets/retail_sales.csv
-\`\`\`
-
-### Step 2: Build Retail API Image
-
-\`\`\`bash
-docker build -t retail-api:latest ./include/api
-\`\`\`
-
-### Step 3: Start All Services
-
-\`\`\`bash
-astro dev start
-\`\`\`
-
-**Wait 2-3 minutes** for services to initialize.
-
-### Step 4: Access Services
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| **Airflow UI** | http://localhost:8080 | admin / admin |
-| **FastAPI Docs** | http://localhost:8001/docs | None |
-| **Metabase** | http://localhost:3000 | Setup on first visit |
-| **PostgreSQL** | localhost:5435 | postgres / postgres |
+# Retail Analytics Pipeline - Bidco Africa
 
-### Step 5: Run the Pipeline
+A comprehensive retail analytics solution for analyzing Bidco Africa's product performance, pricing strategy, and promotional effectiveness across multiple retail stores.
 
-1. Open Airflow: http://localhost:8080
-2. Find DAG: \`retail_analytics_pipeline\`
-3. Click **Play** button to trigger
-4. Monitor in **Grid** view
+## Overview
 
-**Expected runtime**: 2-5 minutes
+This pipeline processes retail sales data to deliver actionable insights through:
+1. **Data Quality Assessment** - Identifies data issues and reliability scores
+2. **Promotional Performance Analysis** - Measures promo uplift, coverage, and effectiveness
+3. **Pricing Index** - Compares Bidco vs competitor pricing across stores and categories
 
----
+## Architecture
 
-## 📂 Project Structure
+- **Data Orchestration**: Apache Airflow (Astronomer) + Cosmos for dbt integration
+- **Data Transformation**: dbt 1.10.15 with PostgreSQL 15
+- **API Layer**: FastAPI serving analytical results
+- **Visualization**: Metabase dashboards (optional)
 
-\`\`\`
-retail-analytics-pipeline/
-├── dags/
-│   └── retail_analytics_pipeline.py    # Main Airflow DAG
-├── include/
-│   ├── api/
-│   │   ├── Dockerfile                   # FastAPI container
-│   │   └── retail_api.py                # REST API
-│   ├── datasets/
-│   │   └── retail_sales.csv             # Input data
-│   └── dbt/
-│       ├── models/retail/
-│       │   ├── staging/                 # Data cleaning
-│       │   ├── marts/                   # Business logic
-│       │   └── analytics/               # KPIs
-│       ├── macros/                      # Custom functions
-│       ├── dbt_project.yml
-│       └── profiles.yml
-├── Dockerfile                           # Airflow container
-├── requirements.txt
-├── docker-compose.override.yml
-└── README.md
-\`\`\`
+## Requirements Mapping
 
----
+### 1. Data Health ✅
 
-## 💼 Business Questions Answered
+**Endpoints:**
+- `GET /api/data_quality` - Overall health scores by dimension
+- `GET /api/data_quality/issues` - Detailed quality issues
 
-### 1. Data Quality
-**Metric**: Overall health score, completeness %  
-**Table**: \`retail_analytics.data_quality_summary\`  
-**API**: \`GET /api/data-quality\`
+**What We Deliver:**
 
-### 2. Promotion Effectiveness
-**Metric**: Uplift %, discount depth, top performers  
-**Table**: \`retail_analytics.promo_summary\`  
-**API**: \`GET /api/promos\`
+| Requirement | Implementation | Location |
+|-------------|----------------|----------|
+| Missing/duplicated records | Tracks record counts, flags duplicates | `data_quality_summary.dimension = 'Overall Dataset'` |
+| Suspicious outliers | Detects negative quantities, extreme prices using IQR method | `data_quality_issues.issue_type = 'Quantity Outlier'` |
+| Unreliable stores/suppliers | Flags entities with >20% low-quality data | `reliability_status = 'Unreliable'` |
+| Data health score | 0-100 score per store/supplier based on quality metrics | `avg_quality_score` column |
 
-\`\`\`sql
-SELECT product_description, promo_uplift_pct, promo_sales_value
-FROM retail_marts.promo_detection
-WHERE is_bidco = 1 AND is_on_promo = 1
-ORDER BY promo_uplift_pct DESC LIMIT 10;
-\`\`\`
+**Key Metrics:**
+- `high_quality_records` / `total_records` ratio
+- `invalid_quantity_count` - Negative or zero quantities
+- `invalid_sales_count` - Negative sales values
+- `missing_rrp_count` - Missing pricing data
+- `health_rating` - Excellent / Good / Fair / Poor
 
-### 3. Pricing Competitiveness
-**Metric**: Price index, market positioning  
-**Table**: \`retail_analytics.pricing_summary\`  
-**API**: \`GET /api/pricing\`
+### 2. Promotions & Performance ✅
 
-### 4. Store Performance
-**Metric**: Sales by store, promotion frequency  
-**Table**: \`retail_marts.promo_detection\` (aggregated)
+**Endpoints:**
+- `GET /api/promo_summary` - Detailed promo performance per SKU/store
+- `GET /api/promo_summary/aggregated` - Aggregated metrics (coverage, uplift)
+- `GET /api/insights` - Top 3 commercial insights
 
-### 5. Category Insights
-**Metric**: Revenue, units sold by category  
-**Table**: \`retail_staging.stg_retail_sales\`
+**What We Deliver:**
 
-### 6. Supplier Analysis
-**Metric**: Bidco vs competitor performance  
-**Table**: \`retail_marts.price_comparison\`
+| Requirement | Implementation | API Response Field |
+|-------------|----------------|-------------------|
+| **a. Promo Uplift %** | Cross-store baseline comparison | `promo_uplift_pct` |
+| **b. Promo Coverage %** | Stores running promo per SKU/supplier | `stores_with_promo`, `promo_coverage_pct` |
+| **c. Promo Price Impact** | Discount depth vs RRP | `promo_discount_depth_pct` |
+| **d. Baseline vs Promo Price** | Realized unit price comparison | `avg_non_promo_price`, `avg_promo_price` |
+| **e. Top Performing SKUs** | Ranked by uplift/volume | `ORDER BY promo_uplift_pct DESC` |
 
-### 7. Temporal Trends
-**Metric**: Daily/weekly/monthly patterns  
-**Table**: \`retail_staging.stg_retail_sales\`
+**Methodology - Cross-Store Baseline:**
 
-### 8. SKU Performance
-**Metric**: Top sellers, sales velocity  
-**Table**: \`retail_marts.promo_detection\`
+Since each store-SKU combination appears on only one day, we use **cross-store comparison**:
 
-### 9. Data Anomalies
-**Metric**: Missing values, outliers  
-**Table**: \`retail_analytics.data_quality_issues\`
+1. **Baseline Calculation**: Median quantity sold across ALL stores for the same SKU
+2. **Promo Detection**: Discount ≥10% from RRP (configurable via `promo_discount_threshold`)
+3. **Uplift Calculation**:
+   ```
+   Uplift % = (Promo Day Units - Baseline Units) / Baseline Units × 100
+   ```
+
+**Example:**
+- **SKU**: Sprite 500ML (Item 370221)
+- **Baseline**: Median of 35 stores = 43 units/day
+- **Store A (Promo)**: 120 units at 30% discount
+- **Uplift**: (120 - 43) / 43 × 100 = **179% uplift**
+
+**Commercial Insights Provided:**
+
+1. **Promotion Effectiveness**
+   - Which discount depths drive highest uplift
+   - Optimal promo duration per category
+   - Store responsiveness to promotions
 
-### 10. Baseline Performance
-**Metric**: Non-promo sales levels  
-**Table**: \`retail_marts.store_baselines\`
+2. **Competitive Context**
+   - Bidco vs competitor promo intensity
+   - Category-level promo saturation
+   - Supplier-level promo coverage
 
----
+3. **Revenue Impact**
+   - Promo sales value contribution
+   - Units moved during promo periods
+   - ROI indicators (uplift vs discount depth)
 
-## 🔌 API Documentation
+### 3. Pricing Index ✅
 
-### Available Endpoints
+**Endpoints:**
+- `GET /api/price_index` - Detailed price positioning per SKU
+- `GET /api/price_index/summary` - Aggregated positioning views
 
-\`\`\`bash
-# Health check
-curl http://localhost:8001/health
+**What We Deliver:**
 
-# Get all metrics
-curl http://localhost:8001/api/metrics | jq
+| Requirement | Implementation | API Response |
+|-------------|----------------|--------------|
+| **Store-level view** | Bidco vs competitors per store | `view_level = 'Store'` |
+| **Section-level view** | Pricing within Sub-Department + Section | `view_level = 'Store + Section'` |
+| **Roll-up view** | Overall Bidco positioning | `view_level = 'Overall'` |
+| **Realized vs RRP** | Shows discounting patterns | `avg_realized_price`, `avg_rrp`, `own_discount_pct` |
 
-# Promotion data
-curl http://localhost:8001/api/promos | jq
+**Price Index Calculation:**
+
+```
+Price Index = (Bidco Avg Price / Competitor Avg Price in Section) × 100
+```
 
-# Pricing analysis
-curl http://localhost:8001/api/pricing | jq
+**Positioning Categories:**
+- **Discount** (<90): Bidco priced below market
+- **At Market** (90-110): Competitive pricing
+- **Premium** (>110): Bidco priced above market
 
-# Data quality
-curl http://localhost:8001/api/data-quality | jq
-\`\`\`
+**Key Metrics:**
+- `price_index_vs_competitors` - Numerical index (100 = at market)
+- `price_positioning` - Categorical (discount/at_market/premium)
+- `dominant_positioning` - Overall strategy (e.g., "Premium Positioning")
+- `discount_pct`, `at_market_pct`, `premium_pct` - Distribution of SKUs
 
-**Interactive Docs**: http://localhost:8001/docs
+## API Endpoints Reference
 
----
+### Base URL
+```
+http://localhost:8001
+```
 
-## 📊 Metabase Dashboards
+See comprehensive endpoint documentation at: http://localhost:8001/docs
 
-### Setup Instructions
+## Setup & Deployment
 
-1. Visit http://localhost:3000
-2. Create admin account
-3. Add PostgreSQL connection:
-   - Host: \`postgres\` (Docker internal)
-   - Port: \`5432\`
-   - Database: \`postgres\`
-   - User/Pass: \`postgres\` / \`postgres\`
+### Prerequisites
+- Docker Desktop
+- Python 3.11+
+- Astronomer CLI (`brew install astro`)
 
-### Recommended Dashboard: Executive Summary
+### Quick Start
 
-**Cards**:
-- Total Sales (last 30 days)
-- Data Quality Score
-- Active Promotions
-- Bidco Market Share
-- Price Position Indicator
+1. **Clone and navigate:**
+   ```bash
+   cd retail-analytics-pipeline
+   ```
 
-**SQL Example**:
-\`\`\`sql
-SELECT
-    SUM("Total_Sales") as total_sales,
-    COUNT(DISTINCT "Store_Name") as stores
-FROM public.retail_sales
-WHERE "Date_Of_Sale" >= CURRENT_DATE - INTERVAL '30 days';
-\`\`\`
+2. **Fix Docker credentials (if needed):**
+   ```bash
+   # Remove credsStore from Docker config
+   sed -i '' '/"credsStore"/d' ~/.docker/config.json
+   ```
 
----
+3. **Start the pipeline:**
+   ```bash
+   astro dev start
+   ```
 
-## 🔧 Troubleshooting
+4. **Access services:**
+   - Airflow UI: http://localhost:8080 (admin/admin)
+   - FastAPI: http://localhost:8001
+   - API Docs: http://localhost:8001/docs
+   - Metabase: http://localhost:3000
 
-### CSV File Not Found
-\`\`\`bash
-# Verify file exists
-ls -la include/datasets/retail_sales.csv
+5. **Trigger the DAG:**
+   - Go to Airflow UI → DAGs → `retail_analytics_pipeline`
+   - Click "Trigger DAG"
+   - Wait for completion (~5-10 minutes)
 
-# Copy if missing
-cp /path/to/data.csv include/datasets/retail_sales.csv
-astro dev restart
-\`\`\`
+6. **Query the API:**
+   ```bash
+   curl http://localhost:8001/api/data_quality
+   curl http://localhost:8001/api/promo_summary/aggregated
+   curl http://localhost:8001/api/price_index/summary
+   curl http://localhost:8001/api/insights
+   ```
 
-### Metabase Connection Issues
-Use Docker hostname \`postgres\` (not localhost) with port \`5432\` (not 5435)
+## Key Assumptions & Limitations
 
-### DAG Not Appearing
-\`\`\`bash
-# Check for syntax errors
-astro dev parse
+### Data Assumptions
 
-# View logs
-astro dev logs -f -s
-\`\`\`
+1. **Sparse Sales Data**: Each store-SKU appears on only 1 day in the dataset
+2. **Cross-Store Baseline**: Uses median quantity across all stores as baseline
+3. **RRP as Reference**: RRP (Recommended Retail Price) used as pricing baseline
+4. **7-Day Window**: Dataset covers Sept 22-28, 2025 (7 days)
 
-### Out of Memory
-Increase Docker Desktop memory to 8GB+:
-- Settings → Resources → Memory → 8GB → Apply & Restart
+### Methodological Choices
 
----
+1. **Promo Detection**: 10% discount threshold (industry standard)
+2. **Quality Outliers**: IQR method (1.5 × IQR beyond Q1/Q3)
+3. **Price Index**: Section-level comparison (Sub-Department + Section)
+4. **Uplift Calculation**: Cross-store median as baseline
 
-## 🛑 Stopping Services
+## Commercial Insights for Bidco Stakeholders
 
-\`\`\`bash
-# Stop (preserves data)
-astro dev stop
+### 1. Promotional Strategy Optimization
 
-# Clean slate
-astro dev kill
-\`\`\`
+**What We Found:**
+- Identifies which discount depths drive optimal uplift
+- Shows which stores respond best to promotions
+- Reveals category-specific promo effectiveness
 
----
+### 2. Competitive Pricing Position
 
-## 📈 Production Deployment
+**What We Found:**
+- Bidco's overall price positioning (discount/at-market/premium)
+- Store-by-store pricing competitiveness
+- Category gaps where Bidco is over/under-priced
 
-### Step 1: Environment Variables
-Create \`.env\` file:
-\`\`\`env
-AIRFLOW__CORE__FERNET_KEY=<generate-new-key>
-AIRFLOW__WEBSERVER__SECRET_KEY=<generate-new-key>
-POSTGRES_PASSWORD=<strong-password>
-\`\`\`
+### 3. Data Quality & Operational Excellence
 
-### Step 2: Secure Configuration
-- Change default Airflow credentials
-- Use secrets manager for DB passwords
-- Enable SSL for PostgreSQL
-- Configure firewall rules
+**What We Found:**
+- Unreliable stores with poor data quality
+- Systematic data issues (missing barcodes, invalid prices)
+- Supplier-level data health
 
-### Step 3: Deploy
-\`\`\`bash
-# Push to Astronomer Cloud
-astro deploy
+## License
 
-# Or use Docker Compose in production
-docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
-\`\`\`
-
----
-
-## 📞 Support
-
-**Issues?**
-1. Check [Troubleshooting](#-troubleshooting)
-2. Review logs: \`astro dev logs\`
-3. Contact data engineering team
-
----
-
-**Built with ❤️ for Bidco Africa**
-
-*Last Updated: 2025-01-13 | Apache Airflow 3.1.2*
+Proprietary - Bidco Africa Analytics Project

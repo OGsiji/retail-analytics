@@ -5,12 +5,14 @@
   )
 }}
 
+-- Summary metrics for promotional activity with uplift analysis
+
 WITH promo_data AS (
     SELECT * FROM {{ ref('promo_detection') }}
     WHERE is_on_promo = 1
 ),
 
--- Promo coverage by supplier and store
+-- Promo coverage by supplier
 promo_coverage AS (
     SELECT
         supplier,
@@ -20,7 +22,11 @@ promo_coverage AS (
         ROUND(AVG(promo_uplift_pct), 2) as avg_uplift_pct,
         ROUND(AVG(promo_discount_depth_pct), 2) as avg_discount_depth_pct,
         SUM(promo_units_sold) as total_promo_units,
-        SUM(promo_sales_value) as total_promo_sales
+        SUM(promo_sales_value) as total_promo_sales,
+        -- Discount tier distribution
+        COUNT(CASE WHEN discount_tier = 'Deep Discount (30%+)' THEN 1 END) as deep_discount_count,
+        COUNT(CASE WHEN discount_tier = 'Heavy Discount (20-30%)' THEN 1 END) as heavy_discount_count,
+        COUNT(CASE WHEN discount_tier = 'Moderate Discount (10-20%)' THEN 1 END) as moderate_discount_count
     FROM promo_data
     GROUP BY supplier, is_bidco
 ),
@@ -76,6 +82,8 @@ store_promo_performance AS (
         COUNT(DISTINCT CASE WHEN is_bidco = 0 THEN item_code END) as competitor_skus_on_promo,
         ROUND(AVG(CASE WHEN is_bidco = 1 THEN promo_uplift_pct END), 2) as bidco_avg_uplift,
         ROUND(AVG(CASE WHEN is_bidco = 0 THEN promo_uplift_pct END), 2) as competitor_avg_uplift,
+        ROUND(AVG(CASE WHEN is_bidco = 1 THEN promo_discount_depth_pct END), 2) as bidco_avg_discount,
+        ROUND(AVG(CASE WHEN is_bidco = 0 THEN promo_discount_depth_pct END), 2) as competitor_avg_discount,
         SUM(CASE WHEN is_bidco = 1 THEN promo_sales_value ELSE 0 END) as bidco_promo_sales,
         SUM(CASE WHEN is_bidco = 0 THEN promo_sales_value ELSE 0 END) as competitor_promo_sales
     FROM promo_data
@@ -92,7 +100,9 @@ category_promo_analysis AS (
         ROUND(AVG(CASE WHEN is_bidco = 1 THEN promo_discount_depth_pct END), 2) as bidco_avg_discount,
         ROUND(AVG(CASE WHEN is_bidco = 0 THEN promo_discount_depth_pct END), 2) as competitor_avg_discount,
         ROUND(AVG(CASE WHEN is_bidco = 1 THEN promo_uplift_pct END), 2) as bidco_avg_uplift,
-        ROUND(AVG(CASE WHEN is_bidco = 0 THEN promo_uplift_pct END), 2) as competitor_avg_uplift
+        ROUND(AVG(CASE WHEN is_bidco = 0 THEN promo_uplift_pct END), 2) as competitor_avg_uplift,
+        SUM(CASE WHEN is_bidco = 1 THEN promo_sales_value ELSE 0 END) as bidco_promo_sales,
+        SUM(CASE WHEN is_bidco = 0 THEN promo_sales_value ELSE 0 END) as competitor_promo_sales
     FROM promo_data
     GROUP BY sub_department, section
 )

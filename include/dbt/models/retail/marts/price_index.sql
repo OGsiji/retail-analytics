@@ -1,7 +1,14 @@
 {{
   config(
     materialized='table',
-    schema='retail_marts'
+    schema='retail_marts',
+    post_hook=[
+      "CREATE INDEX IF NOT EXISTS idx_price_index_bidco ON {{ this }}(is_bidco)",
+      "CREATE INDEX IF NOT EXISTS idx_price_index_store ON {{ this }}(store_name)",
+      "CREATE INDEX IF NOT EXISTS idx_price_index_section ON {{ this }}(section)",
+      "CREATE INDEX IF NOT EXISTS idx_price_index_positioning ON {{ this }}(price_positioning)",
+      "CREATE INDEX IF NOT EXISTS idx_price_index_composite ON {{ this }}(is_bidco, store_name, section)"
+    ]
   )
 }}
 
