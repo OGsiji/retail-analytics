@@ -32,6 +32,8 @@ The complete data pipeline orchestrates the following tasks in Airflow:
 
 ### 1. Data Health ✅
 
+![Fastapi Docs](images/fastapi.png)
+
 **Endpoints:**
 - `GET /api/data_quality` - Overall health scores by dimension
 - `GET /api/data_quality/issues` - Detailed quality issues
